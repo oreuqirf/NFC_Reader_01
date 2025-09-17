@@ -5,15 +5,13 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TableLayout
-import android.widget.TableRow
-import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.example.nfc_reader_01.SharedNfcViewModel
 import com.example.nfc_reader_01.databinding.FragmentDashboardBinding
-import com.google.gson.Gson
-import com.google.gson.JsonSyntaxException
+import org.json.JSONException
+import org.json.JSONObject
 
 class DashboardFragment : Fragment() {
 
@@ -34,66 +32,62 @@ class DashboardFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         sharedNfcViewModel = ViewModelProvider(requireActivity()).get(SharedNfcViewModel::class.java)
-
-        sharedNfcViewModel.dashboardJsonString.observe(viewLifecycleOwner) { jsonString ->
-            if (jsonString.isNullOrBlank()) {
-                binding.textDashboard.text = "Aproxime una etiqueta NFC para ver los datos."
-                binding.dashboardTable.visibility = View.GONE
-            } else {
-                displayDataInTable(jsonString)
-                binding.dashboardTable.visibility = View.VISIBLE
-            }
-        }
+        setupObservers()
     }
 
-    private fun displayDataInTable(jsonString: String) {
-        try {
-            // Este es el bloque de validación. Si el JSON es inválido, se lanzará una excepción aquí.
-            val dataMap = Gson().fromJson(jsonString, Map::class.java) as Map<String, Any?>
-
-            binding.dashboardTable.removeAllViews()
-
-            val headerRow = TableRow(context)
-            val header1 = TextView(context)
-            header1.text = "Campo"
-            header1.setPadding(8, 8, 8, 8)
-            header1.textAlignment = View.TEXT_ALIGNMENT_CENTER
-            headerRow.addView(header1)
-
-            val header2 = TextView(context)
-            header2.text = "Valor"
-            header2.setPadding(8, 8, 8, 8)
-            header2.textAlignment = View.TEXT_ALIGNMENT_CENTER
-            headerRow.addView(header2)
-
-            binding.dashboardTable.addView(headerRow)
-
-            for ((key, value) in dataMap) {
-                val dataRow = TableRow(context)
-
-                val keyView = TextView(context)
-                keyView.text = key
-                keyView.setPadding(8, 8, 8, 8)
-                dataRow.addView(keyView)
-
-                val valueView = TextView(context)
-                val displayValue = if (value != null) value.toString() else "null"
-                valueView.text = displayValue
-                valueView.setPadding(8, 8, 8, 8)
-                dataRow.addView(valueView)
-
-                binding.dashboardTable.addView(dataRow)
+    private fun setupObservers() {
+        // Observar datos del registro 1 (Identidad)
+        sharedNfcViewModel.identityDataJson.observe(viewLifecycleOwner) { jsonString ->
+            try {
+                if (jsonString != null) {
+                    val jsonObject = JSONObject(jsonString)
+                    val serialNumber = jsonObject.optString("serialNumber", "N/A")
+                    val firmwareVersion = jsonObject.optString("firmwareVersion", "N/A")
+                    val lastConfigDate = jsonObject.optString("lastConfigurationDate", "N/A")
+                    // Rellenar los nuevos TextInputEditText
+                    binding.editTextSerialNumber.setText(serialNumber)
+                    binding.editTextFirmwareVersion.setText(firmwareVersion)
+                    binding.editTextLastConfigDate.setText(lastConfigDate)
+                } else {
+                    // Limpiar los campos si no hay datos
+                    binding.editTextSerialNumber.setText("")
+                    binding.editTextFirmwareVersion.setText("")
+                    binding.editTextLastConfigDate.setText("")
+                }
+            } catch (e: JSONException) {
+                Log.e("DashboardFragment", "Error al parsear el JSON de identidad", e)
+                Toast.makeText(context, "Error en el formato del JSON de identidad.", Toast.LENGTH_SHORT).show()
             }
-            binding.textDashboard.text = "Datos de la etiqueta NFC"
+        }
 
-        } catch (e: JsonSyntaxException) {
-            Log.e("DashboardFragment", "Error de sintaxis JSON", e)
-            binding.dashboardTable.removeAllViews()
-            binding.textDashboard.text = "Error: El contenido del tag no es un JSON válido."
-        } catch (e: Exception) {
-            Log.e("DashboardFragment", "Error al procesar el JSON: ${e.message}", e)
-            binding.dashboardTable.removeAllViews()
-            binding.textDashboard.text = "Error inesperado al procesar los datos."
+        // Observar datos del registro 2 (Proceso)
+        sharedNfcViewModel.processDataJson.observe(viewLifecycleOwner) { jsonString ->
+            try {
+                if (jsonString != null) {
+                    val jsonObject = JSONObject(jsonString)
+                    val volumen = jsonObject.optInt("volumen", -1).toString()
+                    val caudal = jsonObject.optInt("caudal", -1).toString()
+                    val temperatura = jsonObject.optInt("temperatura", -1).toString()
+                    val status = jsonObject.optString("status", "N/A")
+                    val timestamp = jsonObject.optString("timestamp", "N/A")
+                    // Rellenar los nuevos TextInputEditText
+                    binding.editTextVolumen.setText(volumen)
+                    binding.editTextCaudal.setText(caudal)
+                    binding.editTextTemperatura.setText(temperatura)
+                    binding.editTextStatus.setText(status)
+                    binding.editTextTimestamp.setText(timestamp)
+                } else {
+                    // Limpiar los campos si no hay datos
+                    binding.editTextVolumen.setText("")
+                    binding.editTextCaudal.setText("")
+                    binding.editTextTemperatura.setText("")
+                    binding.editTextStatus.setText("")
+                    binding.editTextTimestamp.setText("")
+                }
+            } catch (e: JSONException) {
+                Log.e("DashboardFragment", "Error al parsear el JSON de proceso", e)
+                Toast.makeText(context, "Error en el formato del JSON de proceso.", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

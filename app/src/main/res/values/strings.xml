@@ -2,6 +2,7 @@
     <string name="app_name">NFC_Reader_01</string>
     <string name="title_home">Home</string>
     <string name="title_dashboard">Dashboard</string>
+    <string name="title_configuration">Configuration</string>
     <string name="title_notifications">Notifications</string>
     <string name="nfc_status_placeholder">Estatus de NFC</string>
     <string name="nfc_characteristics_placeholder">Características de la etiqueta:</string>

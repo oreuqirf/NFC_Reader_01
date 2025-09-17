@@ -1,113 +1,135 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.home.HomeFragment">
 
-    <TextView
-        android:id="@+id/nfc_status_message"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/nfc_status_section"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="NFC no está habilitado."
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="16dp"
-        android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/open_settings_button"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <Button
-        android:id="@+id/open_settings_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Abrir Configuración de NFC"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        android:padding="16dp"
+        android:background="#F0F0F0"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/nfc_status_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NFC está deshabilitado. Por favor, habilite NFC en los ajustes de su dispositivo."
+            android:textAlignment="center"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/open_settings_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Abrir Ajustes NFC"/>
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/main_content"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
         android:orientation="vertical"
         android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/nfc_status_section"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintEnd_toEndOf="parent"
+        android:padding="16dp">
+
+        <ImageView
+            android:id="@+id/status_icon"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:src="@drawable/ic_nfc_scan_24"
+            android:layout_marginBottom="16dp"/>
 
         <TextView
-            android:id="@+id/text_home"
-            android:layout_width="match_parent"
+            android:id="@+id/status_message"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="8dp"
+            android:text="Aproxime una etiqueta NFC"
+            android:textSize="18sp"
+            android:textStyle="bold"
             android:textAlignment="center"
-            android:textSize="20sp"
-            tools:text="This is home fragment" />
+            android:layout_marginBottom="24dp"/>
 
-        <Button
-            android:id="@+id/read_button"
+        <LinearLayout
+            android:id="@+id/dynamic_buttons_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Leer Tag" />
+            android:orientation="vertical"
+            android:gravity="center">
 
-        <Button
-            android:id="@+id/write_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Escribir Valor Aleatorio" />
+            <EditText
+                android:id="@+id/new_tag_input"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:hint="Ingrese contenido para la etiqueta"
+                android:inputType="text"
+                android:layout_marginBottom="16dp"
+                android:minWidth="250dp"
+                android:visibility="gone"/>
 
-        <Button
-            android:id="@+id/update_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Actualizar JSON del Dashboard" />
+            <Button
+                android:id="@+id/write_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Escribir Registro de Proceso"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone"/>
 
-        <EditText
-            android:id="@+id/new_tag_input"
-            android:layout_width="250dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:hint="Ingrese texto para nueva etiqueta"
-            android:inputType="text" />
+            <Button
+                android:id="@+id/update_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Actualizar Configuración"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone"/>
 
-        <Button
-            android:id="@+id/new_tag_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Escribir Nueva Etiqueta" />
+            <Button
+                android:id="@+id/new_tag_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Escribir Nueva Etiqueta"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone"/>
 
-        <TextView
-            android:id="@+id/factory_reset_message"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="¡Etiqueta vacía! ¿Desea escribir la configuración de fábrica?"
-            android:textAlignment="center"
-            android:textSize="16sp"
-            android:textStyle="italic"
-            android:visibility="gone" />
+            <Button
+                android:id="@+id/factory_reset_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Restablecer Configuración de Fábrica"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone"/>
 
-        <Button
-            android:id="@+id/factory_reset_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Configuración de Fábrica"
-            android:visibility="gone" />
+            <Button
+                android:id="@+id/format_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Formatear y Escribir"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone"/>
 
+            <Button
+                android:id="@+id/read_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Leer TAG"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone"/>
+
+        </LinearLayout>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-

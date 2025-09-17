@@ -1,89 +1,74 @@
 package com.example.nfc_reader_01
 
+import android.nfc.Tag
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import android.content.Intent
-import android.nfc.NdefMessage
-import android.nfc.NfcAdapter
-import android.nfc.Tag
-import android.nfc.tech.Ndef
-import android.util.Log
-import com.google.gson.Gson
-import java.nio.charset.Charset
 
 class SharedNfcViewModel : ViewModel() {
-    val nfcIntent = MutableLiveData<Intent>()
-    val nfcDataString = MutableLiveData<String>()
-    val dashboardJsonString = MutableLiveData<String>()
-    val nfcTag = MutableLiveData<Tag>()
 
-    val isTagDetected = MutableLiveData(false)
-    val isNfcEnabled = MutableLiveData<Boolean>()
-    val isEmptyNdefTag = MutableLiveData<Boolean>(false)
+    private val _isNfcEnabled = MutableLiveData<Boolean>()
+    val isNfcEnabled: LiveData<Boolean> = _isNfcEnabled
 
-    fun processNfcIntent(intent: Intent?) {
-        if (intent != null) {
-            val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
-            if (tag != null) {
-                this.nfcTag.value = tag
-                this.isTagDetected.value = true
-                Log.d("SharedNfcViewModel", "Etiqueta procesada en el ViewModel.")
+    private val _nfcTag = MutableLiveData<Tag?>()
+    val nfcTag: LiveData<Tag?> = _nfcTag
 
-                val ndef = Ndef.get(tag)
-                if (ndef != null) {
-                    try {
-                        ndef.connect()
-                        val ndefMessage = ndef.cachedNdefMessage
-                        val records = ndefMessage.records
+    private val _isNdefTag = MutableLiveData<Boolean>()
+    val isNdefTag: LiveData<Boolean> = _isNdefTag
 
-                        // Detección de etiqueta vacía
-                        isEmptyNdefTag.value = ndefMessage.records.isEmpty()
+    private val _isNdefFormatable = MutableLiveData<Boolean>()
+    val isNdefFormatable: LiveData<Boolean> = _isNdefFormatable
 
-                        val recordContents = records.mapIndexed { index, record ->
-                            try {
-                                val payload = record.payload
-                                val text = parseNdefTextPayload(payload)
-                                "Registro N°${index + 1}:\n$text"
-                            } catch (e: Exception) {
-                                "Registro N°${index + 1}:\n(Contenido no legible)"
-                            }
-                        }
+    private val _isEmptyNdefTag = MutableLiveData<Boolean>()
+    val isEmptyNdefTag: LiveData<Boolean> = _isEmptyNdefTag
 
-                        val notificationContent = recordContents.joinToString(separator = "\n\n")
-                        nfcDataString.value = notificationContent
+    private val _identityDataJson = MutableLiveData<String?>()
+    val identityDataJson: LiveData<String?> = _identityDataJson
 
-                        if (records.isNotEmpty()) {
-                            val firstRecordPayload = records[0].payload
-                            val json = parseNdefTextPayload(firstRecordPayload)
+    private val _processDataJson = MutableLiveData<String?>()
+    val processDataJson: LiveData<String?> = _processDataJson
 
-                            dashboardJsonString.value = json
-                            Log.d("SharedNfcViewModel", "Payload extraído y enviado al Dashboard.")
+    private val _configurationDataJson = MutableLiveData<String?>()
+    val configurationDataJson: LiveData<String?> = _configurationDataJson
 
-                        }
-                    } catch (e: Exception) {
-                        Log.e("SharedNfcViewModel", "Error al procesar la etiqueta: ${e.message}")
-                        nfcDataString.value = "Error al leer los datos de la etiqueta: ${e.message}"
-                        isEmptyNdefTag.value = false
-                    } finally {
-                        ndef.close()
-                    }
-                } else {
-                    nfcDataString.value = "Etiqueta no compatible con NDEF. Tecnologías: ${tag.techList.joinToString()}"
-                    isEmptyNdefTag.value = false
-                }
-            }
-        }
+    private val _writeConfigRequest = MutableLiveData<String?>()
+    val writeConfigRequest: LiveData<String?> = _writeConfigRequest
+
+    fun setNfcStatus(status: Boolean) {
+        _isNfcEnabled.value = status
     }
 
-    private fun parseNdefTextPayload(payload: ByteArray): String {
-        val statusByte = payload[0]
-        val languageCodeLength = statusByte.toInt() and 0x3F
+    fun setNfcTag(tag: Tag?) {
+        _nfcTag.value = tag
+    }
 
-        val textBytes = payload.copyOfRange(1 + languageCodeLength, payload.size)
+    fun setTagInfo(isNdef: Boolean, isNdefForm: Boolean, isEmpty: Boolean) {
+        _isNdefTag.value = isNdef
+        _isNdefFormatable.value = isNdefForm
+        _isEmptyNdefTag.value = isEmpty
+    }
 
-        val isUtf16 = (statusByte.toInt() and 0x80) != 0
-        val charset = if (isUtf16) Charset.forName("UTF-16") else Charset.forName("UTF-8")
+    fun setNdefRecords(identityJson: String?, processJson: String?, configurationJson: String?) {
+        _identityDataJson.value = identityJson
+        _processDataJson.value = processJson
+        _configurationDataJson.value = configurationJson
+    }
 
-        return String(textBytes, charset).trim()
+    fun setWriteConfigRequest(json: String) {
+        _writeConfigRequest.value = json
+    }
+
+    fun resetWriteRequest() {
+        _writeConfigRequest.value = null
+    }
+
+    fun resetNfcData() {
+        _nfcTag.value = null
+        _isNdefTag.value = false
+        _isNdefFormatable.value = false
+        _isEmptyNdefTag.value = false
+        _identityDataJson.value = null
+        _processDataJson.value = null
+        _configurationDataJson.value = null
     }
 }

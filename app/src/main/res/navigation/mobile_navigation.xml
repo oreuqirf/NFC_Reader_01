@@ -18,6 +18,12 @@
         tools:layout="@layout/fragment_dashboard" />
 
     <fragment
+        android:id="@+id/navigation_configuration"
+        android:name="com.example.nfc_reader_01.ui.configuration.ConfigurationFragment"
+        android:label="@string/title_configuration"
+        tools:layout="@layout/fragment_configuration" />
+
+    <fragment
         android:id="@+id/navigation_notifications"
         android:name="com.example.nfc_reader_01.ui.notifications.NotificationsFragment"
         android:label="@string/title_notifications"
