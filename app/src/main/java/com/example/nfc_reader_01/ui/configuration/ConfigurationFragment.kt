@@ -1,5 +1,7 @@
 package com.example.nfc_reader_01.ui.configuration
 
+import android.nfc.NdefMessage
+import android.nfc.NdefRecord
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -10,8 +12,8 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.example.nfc_reader_01.SharedNfcViewModel
 import com.example.nfc_reader_01.databinding.FragmentConfigurationBinding
-import org.json.JSONException
-import org.json.JSONObject
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 
 class ConfigurationFragment : Fragment() {
 
@@ -26,73 +28,168 @@ class ConfigurationFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentConfigurationBinding.inflate(inflater, container, false)
-        return binding.root
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
         sharedNfcViewModel = ViewModelProvider(requireActivity()).get(SharedNfcViewModel::class.java)
 
-        setupObservers()
         setupListeners()
-    }
+        setupObservers()
 
-    private fun setupObservers() {
-        // Observar datos del registro 3 (Configuración) y rellenar los EditTexts
-        sharedNfcViewModel.configurationDataJson.observe(viewLifecycleOwner) { jsonString ->
-            try {
-                if (jsonString != null) {
-                    val jsonObject = JSONObject(jsonString)
-                    binding.editTextKMeter.setText(jsonObject.optDouble("K_meter", 0.0).toString())
-                    binding.editTextTempRawLow.setText(jsonObject.optDouble("temp_raw_low", 0.0).toString())
-                    binding.editTextTempRawHigh.setText(jsonObject.optDouble("temp_raw_high", 0.0).toString())
-                    binding.editTextTempCalLow.setText(jsonObject.optDouble("temp_cal_low", 0.0).toString())
-                    binding.editTextTempCalHigh.setText(jsonObject.optDouble("temp_cal_high", 0.0).toString())
-                    // Referencias corregidas
-                    binding.editTextFcQQ1.setText(jsonObject.optDouble("fc_q_q1", 0.0).toString())
-                    binding.editTextFcQQ2.setText(jsonObject.optDouble("fc_q_q2", 0.0).toString())
-                    binding.editTextFcQ035.setText(jsonObject.optDouble("fc_q_0_35", 0.0).toString())
-                    binding.editTextFcQ100.setText(jsonObject.optDouble("fc_q_1_00", 0.0).toString())
-                    binding.editTextFcQ10Lm.setText(jsonObject.optDouble("fc_q_10_0", 0.0).toString())
-                    binding.editTextFcQQ3.setText(jsonObject.optDouble("fc_q_q3", 0.0).toString())
-                }
-            } catch (e: JSONException) {
-                Log.e("ConfigurationFragment", "Error al parsear el JSON de configuración", e)
-                Toast.makeText(context, "Error en el formato del JSON de configuración.", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun setupListeners() {
-        binding.saveConfigButton.setOnClickListener {
-            val configData = JSONObject().apply {
-                try {
-                    put("K_meter", binding.editTextKMeter.text.toString().toDouble())
-                    put("temp_raw_low", binding.editTextTempRawLow.text.toString().toDouble())
-                    put("temp_raw_high", binding.editTextTempRawHigh.text.toString().toDouble())
-                    put("temp_cal_low", binding.editTextTempCalLow.text.toString().toDouble())
-                    put("temp_cal_high", binding.editTextTempCalHigh.text.toString().toDouble())
-                    // Referencias corregidas
-                    put("fc_q_q1", binding.editTextFcQQ1.text.toString().toDouble())
-                    put("fc_q_q2", binding.editTextFcQQ2.text.toString().toDouble())
-                    put("fc_q_0_35", binding.editTextFcQ035.text.toString().toDouble())
-                    put("fc_q_1_00", binding.editTextFcQ100.text.toString().toDouble())
-                    put("fc_q_10_0", binding.editTextFcQ10Lm.text.toString().toDouble())
-                    put("fc_q_q3", binding.editTextFcQQ3.text.toString().toDouble())
-                } catch (e: NumberFormatException) {
-                    Toast.makeText(context, "Error: Ingrese valores numéricos válidos.", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-            }
-            val jsonString = configData.toString()
-            sharedNfcViewModel.setWriteConfigRequest(jsonString)
-            Toast.makeText(context, "Configuración guardada en memoria. Aproxime el TAG para escribirla.", Toast.LENGTH_LONG).show()
-        }
+        return binding.root
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
     }
-}
 
+
+    private fun setupListeners() {
+        binding.saveConfigButton.setOnClickListener {
+            // 1. Obtener los registros actuales del ViewModel
+            val currentRecords = sharedNfcViewModel.ndefRecords.value
+
+            // 2. Obtener los datos de configuración de los EditText
+            val kMeter = binding.editTextKMeter.text.toString().toFloatOrNull() ?: 0.0f
+            val tempRawLow = binding.editTextTempRawLow.text.toString().toFloatOrNull() ?: 0.0f
+            val tempRawHigh = binding.editTextTempRawHigh.text.toString().toFloatOrNull() ?: 0.0f
+            val tempCalLow = binding.editTextTempCalLow.text.toString().toFloatOrNull() ?: 0.0f
+            val tempCalHigh = binding.editTextTempCalHigh.text.toString().toFloatOrNull() ?: 0.0f
+            val fcqQ1 = binding.editTextFcqQ1.text.toString().toFloatOrNull() ?: 0.0f
+            val fcqQ2 = binding.editTextFcqQ2.text.toString().toFloatOrNull() ?: 0.0f
+            val fcq035 = binding.editTextFcq035.text.toString().toFloatOrNull() ?: 0.0f
+            val fcq100 = binding.editTextFcq100.text.toString().toFloatOrNull() ?: 0.0f
+            val fcq10lm = binding.editTextFcq10Lm.text.toString().toFloatOrNull() ?: 0.0f
+            val fcqQ3 = binding.editTextFcqQ3.text.toString().toFloatOrNull() ?: 0.0f
+
+            // 3. Crear el nuevo registro de configuración con el tipo MIME correcto
+            val configData = ByteBuffer.allocate(44).apply {
+                putFloat(kMeter)
+                putFloat(tempRawLow)
+                putFloat(tempRawHigh)
+                putFloat(tempCalLow)
+                putFloat(tempCalHigh)
+                putFloat(fcqQ1)
+                putFloat(fcqQ2)
+                putFloat(fcq035)
+                putFloat(fcq100)
+                putFloat(fcq10lm)
+                putFloat(fcqQ3)
+            }.array()
+            // Cambio del tipo MIME para que coincida con lo que MainActivity espera
+            val configRecord = NdefRecord(NdefRecord.TNF_MIME_MEDIA, "application/vnd.my_app.binary_config".toByteArray(), ByteArray(0), configData)
+
+            // 4. Combinar todos los registros en un solo NdefMessage
+            val recordsList = mutableListOf<NdefRecord>()
+            currentRecords?.identityData?.let {
+                // Cambio del tipo MIME para que coincida con lo que MainActivity espera
+                recordsList.add(NdefRecord(NdefRecord.TNF_MIME_MEDIA, "application/vnd.my_app.binary_identity".toByteArray(), ByteArray(0), it))
+            }
+            currentRecords?.processData?.let {
+                // Cambio del tipo MIME para que coincida con lo que MainActivity espera
+                recordsList.add(NdefRecord(NdefRecord.TNF_MIME_MEDIA, "application/vnd.my_app.binary_process".toByteArray(), ByteArray(0), it))
+            }
+
+            // Reemplazar el registro de configuración si existe, o agregarlo si no
+            val existingConfigIndex = recordsList.indexOfFirst { String(it.type) == "application/vnd.my_app.binary_config" }
+            if (existingConfigIndex != -1) {
+                recordsList[existingConfigIndex] = configRecord
+            } else {
+                recordsList.add(configRecord)
+            }
+
+            if (recordsList.isEmpty()) {
+                Toast.makeText(context, "No se puede guardar, no hay registros para escribir.", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+
+            val combinedMessage = NdefMessage(recordsList.toTypedArray())
+
+            // 5. Enviar el mensaje completo para la escritura
+            sharedNfcViewModel.setWriteMessageRequest(combinedMessage)
+            Toast.makeText(context, "Solicitud de escritura enviada. Aproxime el TAG para guardar todos los cambios.", Toast.LENGTH_LONG).show()
+        }
+
+        binding.factoryResetButton.setOnClickListener {
+            // 1. Crear un nuevo registro de configuración con valores por defecto (todos 0.0f)
+            val defaultConfigData = ByteBuffer.allocate(44).apply {
+                putFloat(0.0f) // kMeter
+                putFloat(0.0f) // tempRawLow
+                putFloat(0.0f) // tempRawHigh
+                putFloat(0.0f) // tempCalLow
+                putFloat(0.0f) // tempCalHigh
+                putFloat(0.0f) // fcqQ1
+                putFloat(0.0f) // fcqQ2
+                putFloat(0.0f) // fcq035
+                putFloat(0.0f) // fcq100
+                putFloat(0.0f) // fcq10lm
+                putFloat(0.0f) // fcqQ3
+            }.array()
+
+            // 2. Obtener los registros actuales del ViewModel
+            val currentRecords = sharedNfcViewModel.ndefRecords.value
+
+            // 3. Actualizar el ViewModel con los nuevos datos de configuración.
+            // La UI se actualizará automáticamente a través del observador.
+            sharedNfcViewModel.setNdefRecords(
+                currentRecords?.identityData,
+                currentRecords?.processData,
+                defaultConfigData
+            )
+            Toast.makeText(context, "Valores de fábrica restaurados en memoria. Presione 'Guardar Configuración' para transferir los cambios al TAG.", Toast.LENGTH_LONG).show()
+        }
+
+        binding.FormatButton.setOnClickListener {
+            sharedNfcViewModel.setFormatNewTagRequest(true)
+            Toast.makeText(requireContext(), "Acerca el TAG para formatear", Toast.LENGTH_SHORT).show()
+        }
+
+    }
+
+    private fun setupObservers() {
+        sharedNfcViewModel.ndefRecords.observe(viewLifecycleOwner) { records ->
+            val configData = records.configData
+            if (configData != null) {
+                try {
+                    val buffer = ByteBuffer.wrap(configData)
+                    binding.editTextKMeter.setText(buffer.getFloat().toString())
+                    binding.editTextTempRawLow.setText(buffer.getFloat().toString())
+                    binding.editTextTempRawHigh.setText(buffer.getFloat().toString())
+                    binding.editTextTempCalLow.setText(buffer.getFloat().toString())
+                    binding.editTextTempCalHigh.setText(buffer.getFloat().toString())
+                    binding.editTextFcqQ1.setText(buffer.getFloat().toString())
+                    binding.editTextFcqQ2.setText(buffer.getFloat().toString())
+                    binding.editTextFcq035.setText(buffer.getFloat().toString())
+                    binding.editTextFcq100.setText(buffer.getFloat().toString())
+                    binding.editTextFcq10Lm.setText(buffer.getFloat().toString())
+                    binding.editTextFcqQ3.setText(buffer.getFloat().toString())
+                } catch (e: Exception) {
+                    Log.e("ConfigurationFragment", "Error reading config data", e)
+                    // Limpiar todos los campos si hay un error
+                    binding.editTextKMeter.setText("Error")
+                    binding.editTextTempRawLow.setText("Error")
+                    binding.editTextTempRawHigh.setText("Error")
+                    binding.editTextTempCalLow.setText("Error")
+                    binding.editTextTempCalHigh.setText("Error")
+                    binding.editTextFcqQ1.setText("Error")
+                    binding.editTextFcqQ2.setText("Error")
+                    binding.editTextFcq035.setText("Error")
+                    binding.editTextFcq100.setText("Error")
+                    binding.editTextFcq10Lm.setText("Error")
+                    binding.editTextFcqQ3.setText("Error")
+                }
+            } else {
+                // Limpiar los campos si no hay datos
+                binding.editTextKMeter.setText("No hay datos")
+                binding.editTextTempRawLow.setText("No hay datos")
+                binding.editTextTempRawHigh.setText("No hay datos")
+                binding.editTextTempCalLow.setText("No hay datos")
+                binding.editTextTempCalHigh.setText("No hay datos")
+                binding.editTextFcqQ1.setText("No hay datos")
+                binding.editTextFcqQ2.setText("No hay datos")
+                binding.editTextFcq035.setText("No hay datos")
+                binding.editTextFcq100.setText("No hay datos")
+                binding.editTextFcq10Lm.setText("No hay datos")
+                binding.editTextFcqQ3.setText("No hay datos")
+            }
+        }
+    }
+}

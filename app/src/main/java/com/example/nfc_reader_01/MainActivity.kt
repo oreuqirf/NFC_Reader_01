@@ -1,37 +1,38 @@
 package com.example.nfc_reader_01
 
-import android.app.PendingIntent
 import android.content.Intent
+import android.media.MediaPlayer
 import android.nfc.NdefMessage
 import android.nfc.NdefRecord
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.Ndef
-import android.nfc.tech.NdefFormatable
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
-import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.example.nfc_reader_01.databinding.ActivityMainBinding
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import java.io.IOException
+import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
-import org.json.JSONObject
+import java.util.*
+import android.nfc.tech.NdefFormatable
+
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var nfcAdapter: NfcAdapter
-    private lateinit var pendingIntent: PendingIntent
-    private lateinit var sharedNfcViewModel: SharedNfcViewModel
     private lateinit var navController: NavController
+    private lateinit var sharedNfcViewModel: SharedNfcViewModel
+    private var nfcAdapter: NfcAdapter? = null
+    private lateinit var pendingIntent: android.app.PendingIntent
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,41 +54,30 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
 
-        // CÓDIGO AGREGADO: Escuchar cambios en el destino de navegación
-        navController.addOnDestinationChangedListener { _, destination, _ ->
-            if (destination.id == R.id.navigation_home) {
-                // Restablece el estado del ViewModel para refrescar la UI del HomeFragment
-                sharedNfcViewModel.resetNfcData()
-            }
-        }
-
-        // CÓDIGO AGREGADO: Observar la solicitud de escritura del ViewModel
-        sharedNfcViewModel.writeConfigRequest.observe(this) { writeData ->
-            if (writeData != null) {
-                // No hagas nada aquí, la lógica de escritura se maneja en onNewIntent
-                // cuando se detecta un TAG. Este observer solo sirve como señal.
-                Log.d("MainActivity", "Write request observed. Data: $writeData")
-            }
-        }
-
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
         if (nfcAdapter == null) {
-            Toast.makeText(this, "NFC no está disponible en este dispositivo.", Toast.LENGTH_LONG).show()
-            return
+            Toast.makeText(this, "Este dispositivo no soporta NFC.", Toast.LENGTH_LONG).show()
+        } else {
+            pendingIntent = android.app.PendingIntent.getActivity(
+                this, 0,
+                Intent(this, javaClass).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                android.app.PendingIntent.FLAG_MUTABLE
+            )
         }
 
-        sharedNfcViewModel.setNfcStatus(nfcAdapter.isEnabled)
-
-        val intent = Intent(this, javaClass).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_MUTABLE)
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            if (destination.id == R.id.navigation_home) {
+                sharedNfcViewModel.setNfcTag(null)
+                sharedNfcViewModel.setNdefRecords(null, null, null)
+            }
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        if (nfcAdapter.isEnabled) {
-            nfcAdapter.enableForegroundDispatch(this, pendingIntent, null, null)
+        if (nfcAdapter?.isEnabled == true) {
+            nfcAdapter?.enableForegroundDispatch(this, pendingIntent, null, null)
             sharedNfcViewModel.setNfcStatus(true)
-            handleIntent(intent)
         } else {
             sharedNfcViewModel.setNfcStatus(false)
         }
@@ -95,152 +85,185 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        if (nfcAdapter.isEnabled) {
-            nfcAdapter.disableForegroundDispatch(this)
+        if (nfcAdapter?.isEnabled == true) {
+            nfcAdapter?.disableForegroundDispatch(this)
         }
+        sharedNfcViewModel.setNfcTag(null)
+        sharedNfcViewModel.setNdefRecords(null, null, null)
     }
 
-    override fun onNewIntent(intent: Intent) {
+
+    @Suppress("DEPRECATION")
+    override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        handleIntent(intent)
-    }
+        val tag: Tag? = intent?.getParcelableExtra(NfcAdapter.EXTRA_TAG) as Tag?
 
-    private fun handleIntent(intent: Intent) {
-        if (NfcAdapter.ACTION_NDEF_DISCOVERED == intent.action ||
-            NfcAdapter.ACTION_TECH_DISCOVERED == intent.action ||
-            NfcAdapter.ACTION_TAG_DISCOVERED == intent.action) {
-
-            val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
-
+        if (tag != null) {
             sharedNfcViewModel.setNfcTag(tag)
-
-            Log.d("MainActivity", "Tag detected: ${tag?.id}")
-
-            if (tag != null) {
-                // CÓDIGO MODIFICADO: Lógica de escritura vs. lectura
-                val writeData = sharedNfcViewModel.writeConfigRequest.value
-                if (writeData != null) {
-                    writeNfcTag(tag, writeData)
-                    sharedNfcViewModel.resetWriteRequest() // This matches your ViewModel
-                } else {
-                    readNfcTag(tag)
-                }
-            }
+            handleIntent(intent, tag)
         }
     }
+
+
+    private fun handleIntent(intent: Intent, tag: Tag) {
+        val writeMessage = sharedNfcViewModel.writeMessageRequest.value
+        val formatNewTag = sharedNfcViewModel.formatNewTagRequest.value
+
+        if (formatNewTag == true) {
+            writeInitialTag(tag)
+            sharedNfcViewModel.resetFormatNewTagRequest()
+        } else if (writeMessage != null) {
+            writeNfcTag(tag, writeMessage)
+            sharedNfcViewModel.resetWriteMessageRequest()
+        } else {
+            readNfcTag(tag)
+        }
+    }
+
 
     private fun readNfcTag(tag: Tag) {
         val ndef = Ndef.get(tag)
-        val ndefFormatable = NdefFormatable.get(tag)
+        if (ndef == null) {
+            sharedNfcViewModel.setIsNdef(false)
+            sharedNfcViewModel.setIsNdefFormatable(false)
+            sharedNfcViewModel.setIsEmptyNdef(false)
+            return
+        }
 
-        val isNdefTag = ndef != null
-        val isNdefFormatable = ndefFormatable != null
-        val isEmptyNdefTag = ndef != null && ndef.cachedNdefMessage == null
+        sharedNfcViewModel.setIsNdef(true)
+        sharedNfcViewModel.setIsNdefFormatable(NdefFormatable.get(tag) != null)
 
-        sharedNfcViewModel.setTagInfo(isNdefTag, isNdefFormatable, isEmptyNdefTag)
+        try {
+            ndef.connect()
+            val ndefMessage = ndef.ndefMessage
 
-        if (isNdefTag && !isEmptyNdefTag) {
-            try {
-                ndef.connect()
-                val ndefMessage = ndef.ndefMessage
-                val records = ndefMessage.records
+            if (ndefMessage == null) {
+                sharedNfcViewModel.setIsEmptyNdef(true)
+                return
+            }
 
-                val identityRecord = records.getOrNull(0)
-                val processRecord = records.getOrNull(1)
-                val configurationRecord = records.getOrNull(2)
+            sharedNfcViewModel.setIsEmptyNdef(false)
+            val records = ndefMessage.records.toList()
 
-                val identityJson = identityRecord?.let { String(it.payload, StandardCharsets.UTF_8) }
-                val processJson = processRecord?.let { String(it.payload, StandardCharsets.UTF_8) }
-                val configurationJson = configurationRecord?.let { String(it.payload, StandardCharsets.UTF_8) }
+            var identityData: ByteArray? = null
+            var processData: ByteArray? = null
+            var configData: ByteArray? = null
 
-                sharedNfcViewModel.setNdefRecords(identityJson, processJson, configurationJson)
-
-                Log.d("MainActivity", "Identity JSON: $identityJson")
-                Log.d("MainActivity", "Process JSON: $processJson")
-                Log.d("MainActivity", "Configuration JSON: $configurationJson")
-
-            } catch (e: Exception) {
-                Log.e("MainActivity", "Error reading tag", e)
-                Toast.makeText(this, "Error al leer la etiqueta NFC: ${e.message}", Toast.LENGTH_LONG).show()
-                sharedNfcViewModel.setNdefRecords(null, null, null)
-            } finally {
-                try {
-                    ndef?.close()
-                } catch (e: IOException) {
-                    Log.e("MainActivity", "Error closing tag", e)
+            // Itera a través de todos los registros para encontrar los datos correctos.
+            for (record in records) {
+                when (record.toMimeType()) {
+                    "application/vnd.my_app.binary_identity" -> {
+                        identityData = record.payload
+                    }
+                    "application/vnd.my_app.binary_process" -> {
+                        processData = record.payload
+                    }
+                    "application/vnd.my_app.binary_config" -> {
+                        configData = record.payload
+                    }
                 }
             }
-        } else {
-            sharedNfcViewModel.setNdefRecords(null, null, null)
+
+            sharedNfcViewModel.setNdefRecords(identityData, processData, configData)
+
+            // Reproduce un sonido de éxito después de una lectura exitosa
+            playSound()
+
+        } catch (e: Exception) {
+            // Maneja el error, pero no hay un Toast de error aquí, ya que se lee.
+        } finally {
+            try {
+                ndef.close()
+            } catch (e: IOException) {
+                // Maneja el error al cerrar la conexión.
+            }
         }
     }
 
+    // Nuevo método para formatear una etiqueta virgen
+    private fun writeInitialTag(tag: Tag) {
+        // Datos de identidad (estáticos)
+        val identityData = ByteBuffer.allocate(4 + 4 + 10).apply {
+            putInt(12345)
+            putInt(201)
+            put("17-09-2025".toByteArray(StandardCharsets.UTF_8))
+        }.array()
 
-    /**
-     * Escribe un NdefMessage con el JSON de configuración a un TAG NFC,
-     * preservando los registros existentes.
-     */
-    private fun writeNfcTag(tag: Tag, configJson: String) {
+        // Datos de proceso (inicializados en 0)
+        val processData = ByteBuffer.allocate(4 + 4 + 4 + 4 + 19).apply {
+            putInt(0) // Volumen
+            putInt(0) // Caudal
+            putInt(0) // Temperatura
+            putInt(0) // Estado
+            val dateFormat = java.text.SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.getDefault())
+            val timestamp = dateFormat.format(Date()).toByteArray(StandardCharsets.UTF_8)
+            put(timestamp)
+        }.array()
+
+        // Datos de configuración (inicializados en 0.0f)
+        val configData = ByteBuffer.allocate(11 * 4).apply {
+            for (i in 0 until 11) {
+                putFloat(0.0f)
+            }
+        }.array()
+
+        val identityRecord = NdefRecord.createMime("application/vnd.my_app.binary_identity", identityData)
+        val processRecord = NdefRecord.createMime("application/vnd.my_app.binary_process", processData)
+        val configRecord = NdefRecord.createMime("application/vnd.my_app.binary_config", configData)
+
+        val initialMessage = NdefMessage(arrayOf(identityRecord, processRecord, configRecord))
+
+        writeNfcTag(tag, initialMessage)
+    }
+
+
+    private fun writeNfcTag(tag: Tag, message: NdefMessage) {
         val ndef = Ndef.get(tag)
         if (ndef == null) {
-            Toast.makeText(this, "Este TAG no soporta NDEF o es solo de lectura.", Toast.LENGTH_SHORT).show()
-            Log.e("MainActivity", "TAG does not support NDEF or is read-only.")
+            sharedNfcViewModel.setWriteStatus("Este TAG no soporta NDEF o es de solo lectura.")
             return
         }
 
         try {
             ndef.connect()
             if (!ndef.isWritable) {
-                Toast.makeText(this, "El TAG no es escribible.", Toast.LENGTH_SHORT).show()
-                Log.w("MainActivity", "TAG is not writable.")
+                sharedNfcViewModel.setWriteStatus("La etiqueta es de solo lectura.")
                 return
             }
-
-            // 1. Leer los registros existentes del TAG
-            val existingMessage = ndef.ndefMessage
-            val records = existingMessage?.records?.toMutableList() ?: mutableListOf()
-
-            // 2. Crear un nuevo registro de configuración
-            val configRecord = NdefRecord.createMime("application/json", configJson.toByteArray(StandardCharsets.UTF_8))
-
-            // 3. Reemplazar o añadir el registro de configuración (registro N°3)
-            if (records.size >= 3) {
-                // Si ya existen 3 o más registros, reemplazamos el tercero
-                records[2] = configRecord
-            } else {
-                // Si no hay suficientes registros, añadimos el nuevo
-                // Nota: Esto solo debería ocurrir si el TAG fue formateado previamente
-                // de forma no estándar (sin los 3 registros iniciales).
-                while (records.size < 2) {
-                    records.add(NdefRecord.createMime("application/json", "".toByteArray()))
-                }
-                records.add(configRecord)
-            }
-
-            // 4. Crear un nuevo NdefMessage con todos los registros
-            val newMessage = NdefMessage(records.toTypedArray())
 
             val maxSize = ndef.maxSize
-            if (newMessage.toByteArray().size > maxSize) {
-                Toast.makeText(this, "El TAG es demasiado pequeño para los datos.", Toast.LENGTH_SHORT).show()
-                Log.w("MainActivity", "TAG too small.")
+            if (message.toByteArray().size > maxSize) {
+                sharedNfcViewModel.setWriteStatus("La etiqueta es demasiado pequeña para los datos.")
                 return
             }
 
-            // 5. Escribir el mensaje completo en el TAG
-            ndef.writeNdefMessage(newMessage)
-            Toast.makeText(this, "Configuración actualizada y escrita en el TAG.", Toast.LENGTH_SHORT).show()
-            Log.d("MainActivity", "Configuration updated and written to TAG.")
+            ndef.writeNdefMessage(message)
+            sharedNfcViewModel.setWriteStatus("Escritura exitosa.")
 
         } catch (e: Exception) {
-            Toast.makeText(this, "Error al escribir en el TAG: ${e.message}", Toast.LENGTH_LONG).show()
-            Log.e("MainActivity", "Error writing to TAG", e)
+            sharedNfcViewModel.setWriteStatus("Error al escribir: ${e.message}")
         } finally {
             try {
                 ndef.close()
             } catch (e: IOException) {
-                Log.e("MainActivity", "Error closing tag", e)
+                // Maneja el error al cerrar la conexión.
             }
         }
     }
+
+    // Método para reproducir un sonido de éxito desde un recurso local
+    private fun playSound() {
+        try {
+            // Reemplaza 'R.raw.beep' con el nombre de tu archivo de sonido
+            // que debe estar en la carpeta res/raw/ de tu proyecto.
+            val mediaPlayer = MediaPlayer.create(this, R.raw.beep)
+            mediaPlayer?.start()
+            mediaPlayer?.setOnCompletionListener { mp ->
+                mp.release()
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error al reproducir el sonido: ${e.message}")
+        }
+    }
 }
+

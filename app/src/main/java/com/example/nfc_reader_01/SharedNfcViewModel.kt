@@ -1,74 +1,112 @@
 package com.example.nfc_reader_01
 
+import android.nfc.NdefMessage
 import android.nfc.Tag
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
+// Data class para encapsular los datos de los registros.
+data class NdefRecordData(
+    val identityData: ByteArray?,
+    val processData: ByteArray?,
+    val configData: ByteArray?
+)
+
+
+
 class SharedNfcViewModel : ViewModel() {
 
-    private val _isNfcEnabled = MutableLiveData<Boolean>()
-    val isNfcEnabled: LiveData<Boolean> = _isNfcEnabled
+    // Estado del adaptador NFC.
+    private val _nfcStatus = MutableLiveData<Boolean>()
+    val nfcStatus: LiveData<Boolean> = _nfcStatus
 
+    // Estado de la etiqueta NFC detectada.
     private val _nfcTag = MutableLiveData<Tag?>()
     val nfcTag: LiveData<Tag?> = _nfcTag
 
-    private val _isNdefTag = MutableLiveData<Boolean>()
-    val isNdefTag: LiveData<Boolean> = _isNdefTag
+    // Datos de los registros NDEF de la etiqueta.
+    private val _ndefRecords = MutableLiveData<NdefRecordData>()
+    val ndefRecords: LiveData<NdefRecordData> = _ndefRecords
 
+    // LiveData para el estado de la escritura de la etiqueta.
+    private val _writeStatus = MutableLiveData<String?>()
+    val writeStatus: LiveData<String?> = _writeStatus
+
+    // LiveData para la solicitud de escritura, que el MainActivity observa.
+    private val _writeConfigRequest = MutableLiveData<ByteArray?>()
+    val writeConfigRequest: LiveData<ByteArray?> = _writeConfigRequest
+
+    // LiveData para la solicitud de escritura de un mensaje NDEF completo.
+    private val _writeMessageRequest = MutableLiveData<NdefMessage?>()
+    val writeMessageRequest: LiveData<NdefMessage?> = _writeMessageRequest
+
+    // En SharedNfcViewModel.kt
+    private val _formatNewTagRequest = MutableLiveData<Boolean?>()
+    val formatNewTagRequest: LiveData<Boolean?> = _formatNewTagRequest
+
+    // Estado de la etiqueta NDEF.
+    private val _isNdef = MutableLiveData<Boolean>()
+    val isNdef: LiveData<Boolean> = _isNdef
+
+    // Estado de la etiqueta NDEF Formateable.
     private val _isNdefFormatable = MutableLiveData<Boolean>()
     val isNdefFormatable: LiveData<Boolean> = _isNdefFormatable
 
-    private val _isEmptyNdefTag = MutableLiveData<Boolean>()
-    val isEmptyNdefTag: LiveData<Boolean> = _isEmptyNdefTag
+    // Estado de la etiqueta NDEF vacía.
+    private val _isEmptyNdef = MutableLiveData<Boolean>()
+    val isEmptyNdef: LiveData<Boolean> = _isEmptyNdef
 
-    private val _identityDataJson = MutableLiveData<String?>()
-    val identityDataJson: LiveData<String?> = _identityDataJson
 
-    private val _processDataJson = MutableLiveData<String?>()
-    val processDataJson: LiveData<String?> = _processDataJson
+    fun setFormatNewTagRequest(request: Boolean) {
+        _formatNewTagRequest.value = request
+    }
 
-    private val _configurationDataJson = MutableLiveData<String?>()
-    val configurationDataJson: LiveData<String?> = _configurationDataJson
-
-    private val _writeConfigRequest = MutableLiveData<String?>()
-    val writeConfigRequest: LiveData<String?> = _writeConfigRequest
+    fun resetFormatNewTagRequest() {
+        _formatNewTagRequest.value = null
+    }
 
     fun setNfcStatus(status: Boolean) {
-        _isNfcEnabled.value = status
+        _nfcStatus.value = status
     }
 
     fun setNfcTag(tag: Tag?) {
         _nfcTag.value = tag
     }
 
-    fun setTagInfo(isNdef: Boolean, isNdefForm: Boolean, isEmpty: Boolean) {
-        _isNdefTag.value = isNdef
-        _isNdefFormatable.value = isNdefForm
-        _isEmptyNdefTag.value = isEmpty
+    fun setNdefRecords(identityData: ByteArray?, processData: ByteArray?, configData: ByteArray?) {
+        _ndefRecords.value = NdefRecordData(identityData, processData, configData)
     }
 
-    fun setNdefRecords(identityJson: String?, processJson: String?, configurationJson: String?) {
-        _identityDataJson.value = identityJson
-        _processDataJson.value = processJson
-        _configurationDataJson.value = configurationJson
+    fun setWriteStatus(status: String?) {
+        _writeStatus.value = status
     }
 
-    fun setWriteConfigRequest(json: String) {
-        _writeConfigRequest.value = json
+    fun setWriteConfigRequest(data: ByteArray?) {
+        _writeConfigRequest.value = data
     }
 
     fun resetWriteRequest() {
         _writeConfigRequest.value = null
     }
 
-    fun resetNfcData() {
-        _nfcTag.value = null
-        _isNdefTag.value = false
-        _isNdefFormatable.value = false
-        _isEmptyNdefTag.value = false
-        _identityDataJson.value = null
-        _processDataJson.value = null
-        _configurationDataJson.value = null
+    fun setWriteMessageRequest(ndefMessage: NdefMessage) {
+        _writeMessageRequest.value = ndefMessage
+    }
+
+    fun resetWriteMessageRequest() {
+        _writeMessageRequest.value = null
+    }
+
+    fun setIsNdef(isNdef: Boolean) {
+        _isNdef.value = isNdef
+    }
+
+    fun setIsNdefFormatable(isNdefFormatable: Boolean) {
+        _isNdefFormatable.value = isNdefFormatable
+    }
+
+    fun setIsEmptyNdef(isEmptyNdef: Boolean) {
+        _isEmptyNdef.value = isEmptyNdef
     }
 }

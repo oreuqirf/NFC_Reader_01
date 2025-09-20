@@ -2,10 +2,8 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".ui.configuration.ConfigurationFragment">
+    android:layout_height="match_parent">
 
     <ScrollView
         android:layout_width="match_parent"
@@ -39,7 +37,7 @@
                     android:id="@+id/edit_text_k_meter"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -51,7 +49,7 @@
                     android:id="@+id/edit_text_temp_raw_low"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -63,7 +61,7 @@
                     android:id="@+id/edit_text_temp_raw_high"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -75,7 +73,7 @@
                     android:id="@+id/edit_text_temp_cal_low"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -87,7 +85,7 @@
                     android:id="@+id/edit_text_temp_cal_high"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -96,10 +94,10 @@
                 android:layout_marginBottom="8dp"
                 android:hint="fc_q_Q1">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fc_q_q1"
+                    android:id="@+id/edit_text_fcq_q1"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -108,10 +106,10 @@
                 android:layout_marginBottom="8dp"
                 android:hint="fc_q_Q2">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fc_q_q2"
+                    android:id="@+id/edit_text_fcq_q2"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -120,10 +118,10 @@
                 android:layout_marginBottom="8dp"
                 android:hint="fc_q_0_35">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fc_q_0_35"
+                    android:id="@+id/edit_text_fcq_0_35"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -132,10 +130,10 @@
                 android:layout_marginBottom="8dp"
                 android:hint="fc_q_1_00">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fc_q_1_00"
+                    android:id="@+id/edit_text_fcq_1_00"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -144,10 +142,10 @@
                 android:layout_marginBottom="8dp"
                 android:hint="fc_q_10_0">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fc_q_10_lm"
+                    android:id="@+id/edit_text_fcq_10_lm"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -156,10 +154,10 @@
                 android:layout_marginBottom="16dp"
                 android:hint="fc_q_Q3">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fc_q_q3"
+                    android:id="@+id/edit_text_fcq_q3"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <Button
@@ -168,6 +166,23 @@
                 android:layout_height="wrap_content"
                 android:text="Guardar Configuración"/>
 
+            <!-- Botón para Restablecimiento de Fábrica -->
+            <Button
+                android:id="@+id/factoryResetButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Restablecer Configuración de Fábrica"/>
+
+            <!-- Botón para Restablecimiento de Fábrica -->
+            <Button
+                android:id="@+id/FormatButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Formatear Etiqueta NFC"/>
+
         </LinearLayout>
     </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>
+
