@@ -2,12 +2,13 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
     <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -16,17 +17,17 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:padding="16dp"
-            android:gravity="center_horizontal">
+            android:padding="16dp">
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
                 android:text="Datos de Configuración (Editables):"
                 android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp"/>
+                android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
@@ -37,8 +38,15 @@
                     android:id="@+id/edit_text_k_meter"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal" />
             </com.google.android.material.textfield.TextInputLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:background="?android:attr/listDivider"/>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
@@ -49,7 +57,7 @@
                     android:id="@+id/edit_text_temp_raw_low"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -61,7 +69,7 @@
                     android:id="@+id/edit_text_temp_raw_high"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -73,7 +81,7 @@
                     android:id="@+id/edit_text_temp_cal_low"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -85,104 +93,416 @@
                     android:id="@+id/edit_text_temp_cal_high"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal"/>
+                    android:inputType="numberSigned|numberDecimal" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.textfield.TextInputLayout
+            <View
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:hint="fc_q_Q1">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fcq_q1"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal"/>
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:hint="fc_q_Q2">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fcq_q2"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal"/>
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:hint="fc_q_0_35">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fcq_0_35"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal"/>
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:hint="fc_q_1_00">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fcq_1_00"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal"/>
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:hint="fc_q_10_0">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fcq_10_lm"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal"/>
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
                 android:layout_marginBottom="16dp"
-                android:hint="fc_q_Q3">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fcq_q3"
+                android:background="?android:attr/listDivider"/>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp">
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/text_input_layout_fcq_q1"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal"/>
+                    android:hint="FC Q1"
+                    app:suffixText="%"  app:hintEnabled="true"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/edit_text_fcq_q1_error"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberSigned|numberDecimal"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </com.google.android.material.textfield.TextInputLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingTop="4dp"  android:paddingBottom="4dp"
+                    android:background="@drawable/rounded_border_for_auxiliary_data"
+                    app:layout_constraintTop_toBottomOf="@id/text_input_layout_fcq_q1"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+                    <TextView
+                        android:id="@+id/text_view_fcq_q1_flow"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Flow: L/h"
+                        android:paddingStart="12dp"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?android:attr/textColorSecondary"
+                        tools:ignore="RtlSymmetry" />
+                    <TextView
+                        android:id="@+id/text_view_fcq_q1_temperature"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Temp: °C"
+                        android:paddingEnd="12dp"
+                        android:gravity="end"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?android:attr/textColorSecondary" />
+                </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp">
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/text_input_layout_fcq_q2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="FC Q2"
+                    app:suffixText="%"  app:hintEnabled="true"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/edit_text_fcq_q2_error"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberSigned|numberDecimal"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </com.google.android.material.textfield.TextInputLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingTop="4dp"  android:paddingBottom="4dp"
+                    android:background="@drawable/rounded_border_for_auxiliary_data"
+                    app:layout_constraintTop_toBottomOf="@id/text_input_layout_fcq_q2"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+                    <TextView
+                        android:id="@+id/text_view_fcq_q2_flow"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Flow: L/h"
+                        android:paddingStart="12dp"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?android:attr/textColorSecondary"
+                        tools:ignore="RtlSymmetry" />
+                    <TextView
+                        android:id="@+id/text_view_fcq_q2_temperature"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Temp: °C"
+                        android:paddingEnd="12dp"
+                        android:gravity="end"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?android:attr/textColorSecondary" />
+                </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp">
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/text_input_layout_fcq_0_35"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="FC 0.35L/m"
+                    app:suffixText="%"  app:hintEnabled="true"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/edit_text_fcq_0_35_error"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberSigned|numberDecimal"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </com.google.android.material.textfield.TextInputLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingTop="4dp"  android:paddingBottom="4dp"
+                    android:background="@drawable/rounded_border_for_auxiliary_data"
+                    app:layout_constraintTop_toBottomOf="@id/text_input_layout_fcq_0_35"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+                    <TextView
+                        android:id="@+id/text_view_fcq_0_35_flow"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Flow: L/h"
+                        android:paddingStart="12dp"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?android:attr/textColorSecondary"
+                        tools:ignore="RtlSymmetry" />
+                    <TextView
+                        android:id="@+id/text_view_fcq_0_35_temperature"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Temp: °C"
+                        android:paddingEnd="12dp"
+                        android:gravity="end"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?android:attr/textColorSecondary" />
+                </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp">
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/text_input_layout_fcq_1_00"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="FC 1.0L/m"
+                    app:suffixText="%"  app:hintEnabled="true"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/edit_text_fcq_1_00_error"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberSigned|numberDecimal"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </com.google.android.material.textfield.TextInputLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingTop="4dp"  android:paddingBottom="4dp"
+                    android:background="@drawable/rounded_border_for_auxiliary_data"
+                    app:layout_constraintTop_toBottomOf="@id/text_input_layout_fcq_1_00"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+                    <TextView
+                        android:id="@+id/text_view_fcq_1_00_flow"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Flow: L/h"
+                        android:paddingStart="12dp"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?android:attr/textColorSecondary"
+                        tools:ignore="RtlSymmetry" />
+                    <TextView
+                        android:id="@+id/text_view_fcq_1_00_temperature"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Temp: °C"
+                        android:paddingEnd="12dp"
+                        android:gravity="end"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?android:attr/textColorSecondary" />
+                </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp">
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/text_input_layout_fcq_10_lm"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="FC 10.0L/m"
+                    app:suffixText="%"  app:hintEnabled="true"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/edit_text_fcq_10_lm_error"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberSigned|numberDecimal"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </com.google.android.material.textfield.TextInputLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingTop="4dp"  android:paddingBottom="4dp"
+                    android:background="@drawable/rounded_border_for_auxiliary_data"
+                    app:layout_constraintTop_toBottomOf="@id/text_input_layout_fcq_10_lm"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+                    <TextView
+                        android:id="@+id/text_view_fcq_10_lm_flow"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Flow: L/h"
+                        android:paddingStart="12dp"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?android:attr/textColorSecondary"
+                        tools:ignore="RtlSymmetry" />
+                    <TextView
+                        android:id="@+id/text_view_fcq_10_lm_temperature"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Temp: °C"
+                        android:paddingEnd="12dp"
+                        android:gravity="end"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?android:attr/textColorSecondary" />
+                </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp">
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/text_input_layout_fcq_q3"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="FC Q3"
+                    app:suffixText="%"  app:hintEnabled="true"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/edit_text_fcq_q3_error"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberSigned|numberDecimal"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </com.google.android.material.textfield.TextInputLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingTop="4dp"  android:paddingBottom="4dp"
+                    android:background="@drawable/rounded_border_for_auxiliary_data"
+                    app:layout_constraintTop_toBottomOf="@id/text_input_layout_fcq_q3"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+                    <TextView
+                        android:id="@+id/text_view_fcq_q3_flow"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Flow: L/h"
+                        android:paddingStart="12dp"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?android:attr/textColorSecondary"
+                        tools:ignore="RtlSymmetry" />
+                    <TextView
+                        android:id="@+id/text_view_fcq_q3_temperature"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Temp: °C"
+                        android:paddingEnd="12dp"
+                        android:gravity="end"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:textColor="?android:attr/textColorSecondary" />
+                </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- Last Configuration Date (Timestamp) - CORREGIDO: ahora es de solo lectura y simplificado -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/text_input_layout_last_configuration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Última fecha de configuración">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/text_view_last_configuration_date"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"
+                    android:clickable="false"
+                    android:inputType="none"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    tools:text="15/05/2024 10:30:00" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <Button
-                android:id="@+id/saveConfigButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Guardar Configuración"/>
-
-            <!-- Botón para Restablecimiento de Fábrica -->
-            <Button
-                android:id="@+id/factoryResetButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
                 android:layout_marginTop="8dp"
-                android:text="Restablecer Configuración de Fábrica"/>
+                android:layout_marginBottom="16dp"
+                android:background="?android:attr/listDivider"/>
 
-            <!-- Botón para Restablecimiento de Fábrica -->
-            <Button
-                android:id="@+id/FormatButton"
-                android:layout_width="wrap_content"
+            <!-- NUEVO: Botón para solicitar la lectura de configuración -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
                 android:layout_marginTop="8dp"
-                android:text="Formatear Etiqueta NFC"/>
+                android:layout_marginBottom="8dp">
+                <Button
+                    android:id="@+id/readConfigButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Leer Configuración del TAG"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:textColor="@color/purple_500"
+                    app:strokeColor="@color/purple_500"
+                    tools:ignore="HardcodedText" />
+            </LinearLayout>
+
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:padding="0dp"  android:background="@drawable/rounded_border_for_auxiliary_data">
+                <Button
+                    android:id="@+id/saveConfigButton"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="Guardar Configuración"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:backgroundTint="@color/design_default_color_primary"
+                    android:textColor="@android:color/white"
+                    tools:ignore="HardcodedText" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="8dp"
+                android:padding="0dp"
+                android:background="@drawable/rounded_border_for_auxiliary_data">
+                <Button
+                    android:id="@+id/factoryResetButton"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="Restablecer Configuración de Fábrica"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:backgroundTint="@android:color/holo_red_dark"
+                    android:textColor="@android:color/white"
+                    tools:ignore="HardcodedText" />
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>
-

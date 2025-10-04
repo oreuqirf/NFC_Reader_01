@@ -3,7 +3,6 @@ package com.example.nfc_reader_01
 import android.content.Intent
 import android.media.MediaPlayer
 import android.nfc.NdefMessage
-import android.nfc.NdefRecord
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.Ndef
@@ -18,15 +17,12 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.example.nfc_reader_01.databinding.ActivityMainBinding
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import java.io.IOException
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
-import java.util.*
-import android.nfc.tech.NdefFormatable
+import java.nio.ByteOrder
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), NfcInteractionListener {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var navController: NavController
@@ -34,25 +30,46 @@ class MainActivity : AppCompatActivity() {
     private var nfcAdapter: NfcAdapter? = null
     private lateinit var pendingIntent: android.app.PendingIntent
 
+    // --- Definición de Comandos (App -> TAG) y Tipos MIME ---
+    private val COMMAND_ID_DATA: Byte = 0x01.toByte()
+    private val COMMAND_PROCESS_DATA: Byte = 0x02.toByte()
+    private val COMMAND_CONFIG_DATA: Byte = 0x03.toByte()
+    private val COMMAND_WRITE_CONFIG: Byte = 0x04.toByte()
+
+    private val MIME_TYPE_COMMAND = "application/x-cmd"
+    private val MIME_TYPE_DATA = "application/x-data"
+    private val TAG_NFC_LOG = "NFC_PROTOCOL"
+
+    // --- Constantes de Respuesta (TAG -> App) ---
+    private val BLOCK_RESPONSE_IDENTITY: Byte = 0x81.toByte()
+    private val BLOCK_RESPONSE_PROCESS: Byte = 0x82.toByte()
+    private val BLOCK_RESPONSE_CONFIG: Byte = 0x83.toByte()
+    private val BLOCK_RESPONSE_ENGINEERING: Byte = 0x85.toByte()
+
+    // Función auxiliar para enviar logs al ViewModel y a Logcat
+    private fun logProtocolActivity(message: String) {
+        Log.i(TAG_NFC_LOG, message)
+        sharedNfcViewModel.addProtocolLog(message)
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Inicialización del ViewModel
         sharedNfcViewModel = ViewModelProvider(this).get(SharedNfcViewModel::class.java)
 
-        val navView: BottomNavigationView = binding.navView
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_activity_main) as NavHostFragment
         navController = navHostFragment.navController
 
         val appBarConfiguration = AppBarConfiguration(
-            setOf(
-                R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications, R.id.navigation_configuration
-            )
+            setOf(R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications, R.id.navigation_configuration)
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
-        navView.setupWithNavController(navController)
+        binding.navView.setupWithNavController(navController)
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
         if (nfcAdapter == null) {
@@ -67,8 +84,9 @@ class MainActivity : AppCompatActivity() {
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
             if (destination.id == R.id.navigation_home) {
+                // Limpiar datos al volver a Home
+                sharedNfcViewModel.setNdefRecords(identity = null, process = null, config = null)
                 sharedNfcViewModel.setNfcTag(null)
-                sharedNfcViewModel.setNdefRecords(null, null, null)
             }
         }
     }
@@ -88,139 +106,201 @@ class MainActivity : AppCompatActivity() {
         if (nfcAdapter?.isEnabled == true) {
             nfcAdapter?.disableForegroundDispatch(this)
         }
+        sharedNfcViewModel.setNdefRecords(identity = null, process = null, config = null)
         sharedNfcViewModel.setNfcTag(null)
-        sharedNfcViewModel.setNdefRecords(null, null, null)
     }
 
 
     @Suppress("DEPRECATION")
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        val tag: Tag? = intent?.getParcelableExtra(NfcAdapter.EXTRA_TAG) as Tag?
+        logProtocolActivity("--- Nuevo TAG Detectado ---")
 
-        if (tag != null) {
-            sharedNfcViewModel.setNfcTag(tag)
-            handleIntent(intent, tag)
+        if (intent != null && intent.hasExtra(NfcAdapter.EXTRA_TAG)) {
+            val tag: Tag? = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG) as Tag?
+
+            if (tag != null) {
+                sharedNfcViewModel.setNfcTag(tag)
+                handleCommandResponseCycle(tag)
+            }
         }
     }
 
-
-    private fun handleIntent(intent: Intent, tag: Tag) {
-        val writeMessage = sharedNfcViewModel.writeMessageRequest.value
-        val formatNewTag = sharedNfcViewModel.formatNewTagRequest.value
-
-        if (formatNewTag == true) {
-            writeInitialTag(tag)
-            sharedNfcViewModel.resetFormatNewTagRequest()
-        } else if (writeMessage != null) {
-            writeNfcTag(tag, writeMessage)
-            sharedNfcViewModel.resetWriteMessageRequest()
-        } else {
-            readNfcTag(tag)
-        }
-    }
+    // -----------------------------------------------------------------------
+    // --- LÓGICA CLAVE: GESTIÓN CENTRALIZADA DEL CICLO COMANDO/RESPUESTA ---
+    // -----------------------------------------------------------------------
 
 
-    private fun readNfcTag(tag: Tag) {
-        val ndef = Ndef.get(tag)
-        if (ndef == null) {
-            sharedNfcViewModel.setIsNdef(false)
-            sharedNfcViewModel.setIsNdefFormatable(false)
-            sharedNfcViewModel.setIsEmptyNdef(false)
+    private fun handleCommandResponseCycle(tag: Tag) {
+        val writeRequest = sharedNfcViewModel.writeMessageRequest.value
+        val requestedCommand = sharedNfcViewModel.nextCommandRequest.value
+
+        // 1. --- VERIFICACIÓN DE PRIORIDAD DE ESCRITURA (Comando 0x04) ---
+        // Si existe un mensaje de escritura pendiente (Comando 0x04), ejecutamos la escritura y terminamos.
+        if (writeRequest != null) {
+            logProtocolActivity("🚨 PRIORIDAD 0x04: Mensaje de Guardado de Configuración detectado. Ejecutando escritura.")
+            writeNfcTag(tag, writeRequest)
+            sharedNfcViewModel.clearWriteRequest()
+            logProtocolActivity("Prioridad 0x04 completada. Ciclo terminado.")
             return
         }
 
-        sharedNfcViewModel.setIsNdef(true)
-        sharedNfcViewModel.setIsNdefFormatable(NdefFormatable.get(tag) != null)
+        val ndef = Ndef.get(tag)
+        if (ndef == null) {
+            logProtocolActivity("TAG no es NDEF o no es compatible con NDEF.")
+            return
+        }
 
         try {
             ndef.connect()
-            val ndefMessage = ndef.ndefMessage
 
-            if (ndefMessage == null) {
-                sharedNfcViewModel.setIsEmptyNdef(true)
+            // 2. --- PRIORIDAD DE ESCRITURA DE LECTURA (Comandos 0x01, 0x02, 0x03) ---
+            // Si hay un comando de lectura pendiente, lo escribimos INMEDIATAMENTE y saltamos la lectura de respuesta.
+            if (requestedCommand != null) {
+                if (ndef.isWritable) {
+                    logProtocolActivity("🚨 PRIORIDAD REGULAR: Comando 0x${String.format("%02X", requestedCommand)} solicitado. Saltando lectura de respuesta y escribiendo comando.")
+
+                    val commandMessage = NfcDataParser.createReadCommandMessage(requestedCommand)
+                    sendCommandNfcTag(ndef, commandMessage)
+
+                    // El comando se ha enviado, limpiamos la solicitud.
+                    sharedNfcViewModel.resetNextCommandRequest()
+                } else {
+                    logProtocolActivity("ADVERTENCIA: Comando 0x${String.format("%02X", requestedCommand)} solicitado, pero TAG no es escribible.")
+                }
+
+                // Si el comando se solicitó, la operación se considera terminada, ya sea que se haya escrito o no.
+                // EVITAMOS LA LECTURA DE RESPUESTA EN ESTE CICLO.
                 return
             }
 
-            sharedNfcViewModel.setIsEmptyNdef(false)
-            val records = ndefMessage.records.toList()
+            // ---------------------------------------------------------------------------
+            // 3. --- LÓGICA DE LECTURA DE RESPUESTA REGULAR (Solo si NO hay comandos pendientes) ---
+            // ---------------------------------------------------------------------------
 
-            var identityData: ByteArray? = null
-            var processData: ByteArray? = null
-            var configData: ByteArray? = null
-
-            // Itera a través de todos los registros para encontrar los datos correctos.
-            for (record in records) {
-                when (record.toMimeType()) {
-                    "application/vnd.my_app.binary_identity" -> {
-                        identityData = record.payload
-                    }
-                    "application/vnd.my_app.binary_process" -> {
-                        processData = record.payload
-                    }
-                    "application/vnd.my_app.binary_config" -> {
-                        configData = record.payload
-                    }
+            val ndefMessage = ndef.ndefMessage
+            if (ndefMessage != null) {
+                // Buscamos el registro de datos (MIME_TYPE_DATA) en la respuesta del Tag
+                val dataRecord = ndefMessage.records.find { it.toMimeType() == MIME_TYPE_DATA }
+                if (dataRecord != null) {
+                    logProtocolActivity("Ciclo: Solo Lectura. Respuesta de Datos detectada. Decodificando...")
+                    readDataResponse(ndefMessage)
+                    // Si leemos una respuesta, el ciclo termina.
+                    return
                 }
             }
 
-            sharedNfcViewModel.setNdefRecords(identityData, processData, configData)
-
-            // Reproduce un sonido de éxito después de una lectura exitosa
-            playSound()
+            // 4. Ninguna acción.
+            logProtocolActivity("No hay comando pendiente ni respuesta de datos detectada. Ciclo inactivo.")
 
         } catch (e: Exception) {
-            // Maneja el error, pero no hay un Toast de error aquí, ya que se lee.
+            Log.e(TAG_NFC_LOG, "Error grave en el ciclo de comando/respuesta: ${e.message}", e)
+            logProtocolActivity("ERROR GRAVE: ${e.message}")
         } finally {
             try {
-                ndef.close()
-            } catch (e: IOException) {
-                // Maneja el error al cerrar la conexión.
-            }
+                // CORRECCIÓN: 'ndef' ya se sabe que no es nulo en este punto.
+                if (ndef.isConnected) {
+                    ndef.close()
+                    logProtocolActivity("Conexión NDEF cerrada.")
+                }
+            } catch (e: IOException) { /* ignore */ }
         }
     }
 
-    // Nuevo método para formatear una etiqueta virgen
-    private fun writeInitialTag(tag: Tag) {
-        // Datos de identidad (estáticos)
-        val identityData = ByteBuffer.allocate(4 + 4 + 10).apply {
-            putInt(12345)
-            putInt(201)
-            put("17-09-2025".toByteArray(StandardCharsets.UTF_8))
-        }.array()
 
-        // Datos de proceso (inicializados en 0)
-        val processData = ByteBuffer.allocate(4 + 4 + 4 + 4 + 19).apply {
-            putInt(0) // Volumen
-            putInt(0) // Caudal
-            putInt(0) // Temperatura
-            putInt(0) // Estado
-            val dateFormat = java.text.SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.getDefault())
-            val timestamp = dateFormat.format(Date()).toByteArray(StandardCharsets.UTF_8)
-            put(timestamp)
-        }.array()
+    // -----------------------------------------------------------------------
+    // --- FUNCIONES DE PROTOCOLO COMANDO/RESPUESTA ---
+    // -----------------------------------------------------------------------
 
-        // Datos de configuración (inicializados en 0.0f)
-        val configData = ByteBuffer.allocate(11 * 4).apply {
-            for (i in 0 until 11) {
-                putFloat(0.0f)
+    private fun sendCommandNfcTag(ndef: Ndef, message: NdefMessage) {
+        try {
+            if (message.toByteArray().size > ndef.maxSize) {
+                logProtocolActivity("Mensaje de comando demasiado grande para TAG. Max: ${ndef.maxSize}")
+                return
             }
-        }.array()
 
-        val identityRecord = NdefRecord.createMime("application/vnd.my_app.binary_identity", identityData)
-        val processRecord = NdefRecord.createMime("application/vnd.my_app.binary_process", processData)
-        val configRecord = NdefRecord.createMime("application/vnd.my_app.binary_config", configData)
+            ndef.writeNdefMessage(message)
+            logProtocolActivity("Comando enviado: ÉXITO.")
 
-        val initialMessage = NdefMessage(arrayOf(identityRecord, processRecord, configRecord))
-
-        writeNfcTag(tag, initialMessage)
+        } catch (e: Exception) {
+            Log.e(TAG_NFC_LOG, "Error al escribir comando: ${e.message}", e)
+            logProtocolActivity("Error al escribir comando: ${e.message}")
+        }
     }
 
+    // Se ha simplificado la firma al eliminar 'ndef' ya que no se usa en el cuerpo.
+    private fun readDataResponse(ndefMessage: NdefMessage) {
+        val dataRecord = ndefMessage.records.find { it.toMimeType() == MIME_TYPE_DATA }
+
+        if (dataRecord != null) {
+            val payload = dataRecord.payload
+
+            if (payload.size == 128) {
+
+                val byteBuffer = ByteBuffer.wrap(payload)
+                byteBuffer.order(ByteOrder.LITTLE_ENDIAN)
+
+                val blockId = byteBuffer.get()
+                logProtocolActivity("Respuesta de 128 bytes recibida. Bloque ID de RESPUESTA: 0x${String.format("%02X", blockId)}")
+
+                // Se utiliza una expresión 'when' para manejar de forma más limpia el Block ID.
+                when (blockId) {
+                    BLOCK_RESPONSE_IDENTITY -> {
+                        val identityDataBytes = ByteArray(12)
+                        byteBuffer.get(identityDataBytes)
+                        val identityData = NfcDataParser.parseIdentityData(identityDataBytes)
+                        sharedNfcViewModel.setNdefRecords(identityData, null, null, null)
+                        logProtocolActivity("Datos de identidad (Bloque 0x81) procesados. Longitud: 12 bytes.")
+                    }
+                    BLOCK_RESPONSE_PROCESS -> {
+                        val processDataBytes = ByteArray(36)
+                        byteBuffer.get(processDataBytes)
+                        val processData = NfcDataParser.parseProcessData(processDataBytes)
+                        sharedNfcViewModel.setNdefRecords(null, processData, null, null)
+                        logProtocolActivity("Datos de proceso (Bloque 0x82) procesados. Longitud: 36 bytes.")
+                    }
+                    BLOCK_RESPONSE_CONFIG -> {
+                        // CRÍTICO: Se aumenta el tamaño de la lectura de 92 a 96 bytes para incluir el timestamp.
+                        val configDataBytes = ByteArray(96)
+                        byteBuffer.get(configDataBytes)
+                        val configData = NfcDataParser.parseConfigData(configDataBytes)
+                        sharedNfcViewModel.setNdefRecords(null, null, configData,null)
+                        logProtocolActivity("Datos de configuración (Bloque 0x83) procesados. Longitud: 96 bytes (incluye timestamp).")
+                    }
+                    BLOCK_RESPONSE_ENGINEERING -> {
+                        // CRÍTICO: Se aumenta el tamaño de la lectura de 92 a 96 bytes para incluir el timestamp.
+                        val engineeringDataBytes = ByteArray(40)
+                        byteBuffer.get(engineeringDataBytes)
+                        val engineeringData = NfcDataParser.parseEngineeringData(engineeringDataBytes)
+                        sharedNfcViewModel.setNdefRecords(null, null, null,engineeringData)
+                        logProtocolActivity("Datos de ingeniería (Bloque 0x85) procesados. Longitud: 40 bytes ")
+                    }
+                    else -> {
+                        logProtocolActivity("ADVERTENCIA: Bloque ID de RESPUESTA desconocido (0x${String.format("%02X", blockId)}).")
+                    }
+                }
+
+                playSound()
+
+            } else {
+                logProtocolActivity("ERROR: Respuesta de datos con TAMAÑO INCORRECTO. Esperado: 128, Recibido: ${payload.size}")
+                // CORRECCIÓN ESPECÍFICA: Asegurar que se pasan los 3 parámetros de NDEF Records.
+                sharedNfcViewModel.setNdefRecords(null, null, null)
+            }
+        } else {
+            logProtocolActivity("ERROR INTERNO: No se encontró el registro de datos de respuesta esperado.")
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // --- FUNCIONES DE ESCRITURA EXPLÍCITA (USANDO COMANDO 0x04) ---
+    // -----------------------------------------------------------------------
 
     private fun writeNfcTag(tag: Tag, message: NdefMessage) {
         val ndef = Ndef.get(tag)
         if (ndef == null) {
             sharedNfcViewModel.setWriteStatus("Este TAG no soporta NDEF o es de solo lectura.")
+            sharedNfcViewModel.onWriteFailure()
             return
         }
 
@@ -228,42 +308,75 @@ class MainActivity : AppCompatActivity() {
             ndef.connect()
             if (!ndef.isWritable) {
                 sharedNfcViewModel.setWriteStatus("La etiqueta es de solo lectura.")
+                sharedNfcViewModel.onWriteFailure()
                 return
             }
 
-            val maxSize = ndef.maxSize
-            if (message.toByteArray().size > maxSize) {
-                sharedNfcViewModel.setWriteStatus("La etiqueta es demasiado pequeña para los datos.")
+            if (message.toByteArray().size > ndef.maxSize) {
+                sharedNfcViewModel.setWriteStatus("El comando de escritura es demasiado grande para el TAG.")
+                sharedNfcViewModel.onWriteFailure()
                 return
             }
 
             ndef.writeNdefMessage(message)
-            sharedNfcViewModel.setWriteStatus("Escritura exitosa.")
+
+            sharedNfcViewModel.onWriteSuccess()
+            sharedNfcViewModel.setWriteStatus("Comando de Escritura (0x04) enviado con éxito.")
+            playSound()
 
         } catch (e: Exception) {
+            sharedNfcViewModel.onWriteFailure()
+            Log.e(TAG_NFC_LOG, "Error al escribir el comando de escritura: ${e.message}", e)
             sharedNfcViewModel.setWriteStatus("Error al escribir: ${e.message}")
         } finally {
             try {
-                ndef.close()
-            } catch (e: IOException) {
-                // Maneja el error al cerrar la conexión.
-            }
+                if (ndef.isConnected) ndef.close()
+            } catch (e: IOException) { /* ignore */ }
         }
     }
 
-    // Método para reproducir un sonido de éxito desde un recurso local
     private fun playSound() {
         try {
-            // Reemplaza 'R.raw.beep' con el nombre de tu archivo de sonido
-            // que debe estar en la carpeta res/raw/ de tu proyecto.
+            // Se asume que R.raw.beep existe.
             val mediaPlayer = MediaPlayer.create(this, R.raw.beep)
             mediaPlayer?.start()
             mediaPlayer?.setOnCompletionListener { mp ->
                 mp.release()
             }
         } catch (e: Exception) {
-            Log.e("MainActivity", "Error al reproducir el sonido: ${e.message}")
+            Log.e(TAG_NFC_LOG, "Error al reproducir el sonido: ${e.message}")
         }
     }
-}
 
+    // -----------------------------------------------------------------------
+    // --- IMPLEMENTACIÓN DEL LISTENER DE FRAGMENTOS (NfcInteractionListener) ---
+    // -----------------------------------------------------------------------
+
+    override fun navigateToDashboard() {
+        binding.navView.post {
+            try {
+                navController.navigate(R.id.navigation_dashboard)
+                logProtocolActivity("Navegación automática ejecutada a Dashboard.")
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error al navegar al Dashboard: ${e.message}", e)
+                Toast.makeText(this, "Error de navegación: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    /**
+     * Implementación: Solicita al ViewModel que ponga en cola un comando de lectura (0x01, 0x02, 0x03).
+     */
+    override fun requestNextCommand(commandId: Byte) {
+        sharedNfcViewModel.requestNextCommand(commandId)
+    }
+
+    /**
+     * IMPLEMENTACIÓN:
+     * Solicita al ViewModel que cree y ponga en cola el mensaje de escritura de configuración (0x04)
+     * para el próximo escaneo.
+     */
+    override fun requestWriteConfig() {
+        sharedNfcViewModel.requestWriteConfig()
+    }
+}

@@ -1,23 +1,15 @@
 package com.example.nfc_reader_01.ui.dashboard
 
-import android.nfc.NdefMessage
-import android.nfc.NdefRecord
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import com.example.nfc_reader_01.NdefRecordData
 import com.example.nfc_reader_01.SharedNfcViewModel
 import com.example.nfc_reader_01.databinding.FragmentDashboardBinding
-import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+// El NfcDataParser ya no es necesario aquí porque el ViewModel ahora proporciona los objetos estructurados.
 
 class DashboardFragment : Fragment() {
 
@@ -32,133 +24,150 @@ class DashboardFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentDashboardBinding.inflate(inflater, container, false)
+        // Se inicializa el ViewModel compartido en el ámbito de la actividad.
         sharedNfcViewModel = ViewModelProvider(requireActivity()).get(SharedNfcViewModel::class.java)
 
-        setupListeners()
         setupObservers()
+        // Configurar los listeners, ahora incluyendo el nuevo Comando 0x05.
+        setupListeners()
         return binding.root
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Limpiar el binding para evitar pérdidas de memoria.
         _binding = null
     }
 
-    private fun setupListeners() {
-        // Nuevo botón para actualizar el timestamp en memoria
-        binding.timestampButton.setOnClickListener {
-            // Obtener los datos actuales del ViewModel
-            val currentRecords = sharedNfcViewModel.ndefRecords.value
-
-            // Crear el nuevo timestamp
-            val dateFormat = SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.getDefault())
-            val newTimestamp = dateFormat.format(Date())
-            val timestampBytes = newTimestamp.toByteArray(StandardCharsets.UTF_8)
-
-            // Actualizar el registro de proceso
-            val processData = currentRecords?.processData?.let {
-                val buffer = ByteBuffer.wrap(it)
-                val volumen = buffer.getInt()
-                val caudal = buffer.getInt()
-                val temperatura = buffer.getInt()
-                val estado = buffer.getInt()
-
-                ByteBuffer.allocate(4 + 4 + 4 + 4 + timestampBytes.size).apply {
-                    putInt(volumen)
-                    putInt(caudal)
-                    putInt(temperatura)
-                    putInt(estado)
-                    put(timestampBytes)
-                }.array()
-
-            } ?: run {
-                // Si no hay datos de proceso, crear un array de bytes por defecto con el nuevo timestamp
-                ByteBuffer.allocate(4 + 4 + 4 + 4 + timestampBytes.size).apply {
-                    putInt(0)
-                    putInt(0)
-                    putInt(0)
-                    putInt(0)
-                    put(timestampBytes)
-                }.array()
-            }
-
-            // Crear una nueva instancia de NdefRecordData con el timestamp actualizado
-            val updatedRecords = NdefRecordData(
-                identityData = currentRecords?.identityData,
-                processData = processData,
-                configData = currentRecords?.configData
-            )
-
-            // Actualizar el ViewModel con los datos modificados
-            sharedNfcViewModel.setNdefRecords(updatedRecords.identityData, updatedRecords.processData, updatedRecords.configData)
-
-            // El observador de LiveData se encargará de actualizar la interfaz de usuario.
-            Toast.makeText(context, "Fecha de última configuración actualizada en memoria. Presione 'Guardar Configuración' en la ventana de configuración para guardar.", Toast.LENGTH_LONG).show()
-        }
-    }
-
+    /**
+     * Configura los observadores para reaccionar a los cambios en los datos NFC.
+     * Incluye observadores para 0x01, 0x02, 0x03 y el nuevo 0x05.
+     */
     private fun setupObservers() {
-        sharedNfcViewModel.ndefRecords.observe(viewLifecycleOwner) { records ->
-            // Lectura de los datos de Identidad
-            val identityData = records.identityData
-            if (identityData != null && identityData.size >= 18) {
-                try {
-                    val buffer = ByteBuffer.wrap(identityData)
-                    val id = buffer.getInt()
-                    val value = buffer.getInt()
-                    val dateBytes = ByteArray(10)
-                    buffer.get(dateBytes)
-                    val lastConfigDate = String(dateBytes, StandardCharsets.UTF_8).trim()
 
-                    binding.editTextSerialNumber.setText(id.toString())
-                    binding.editTextFirmwareVersion.setText(value.toString())
-                    binding.editTextLastConfigDate.setText(lastConfigDate)
-                } catch (e: Exception) {
-                    Log.e("DashboardFragment", "Error reading identity data: ${e.message}")
-                    binding.editTextSerialNumber.setText("Error")
-                    binding.editTextFirmwareVersion.setText("Error")
-                    binding.editTextLastConfigDate.setText("Error")
-                }
+        // --- Observa Datos de Identidad (0x81) ---
+        sharedNfcViewModel.identityData.observe(viewLifecycleOwner) { identityData ->
+            if (identityData != null) {
+
+                Toast.makeText(context, "Datos Identidad Actualizados", Toast.LENGTH_SHORT).show()
+
+                // Usar los campos ya parseados del objeto IdentityData
+                binding.editTextSerialNumber.setText(identityData.deviceId.toString())
+                binding.editTextFirmwareVersion.setText(identityData.firmwareVersion)
+                binding.editTextLastConfigDate.setText(identityData.lastConfigurationDate)
             } else {
+                // Mensaje si no hay datos de identidad disponibles.
                 binding.editTextSerialNumber.setText("No hay datos")
                 binding.editTextFirmwareVersion.setText("No hay datos")
                 binding.editTextLastConfigDate.setText("No hay datos")
             }
+        }
 
-            // Lectura de los datos de Proceso
-            val processData = records.processData
-            if (processData != null && processData.size >= 35) {
-                try {
-                    val buffer = ByteBuffer.wrap(processData)
-                    val volumen = buffer.getInt()
-                    val caudal = buffer.getInt()
-                    val temperatura = buffer.getInt()
-                    val estado = buffer.getInt()
-                    val dateBytes = ByteArray(19)
-                    buffer.get(dateBytes)
-                    val timestamp = String(dateBytes, StandardCharsets.UTF_8).trim()
+        // --- Observa Datos de Proceso (0x82) ---
+        sharedNfcViewModel.processData.observe(viewLifecycleOwner) { processData ->
+            if (processData != null) {
 
-                    binding.editTextVolumen.setText(volumen.toString())
-                    binding.editTextCaudal.setText(caudal.toString())
-                    binding.editTextTemperatura.setText(temperatura.toString())
-                    binding.editTextStatus.setText(estado.toString())
-                    binding.editTextTimestamp.setText(timestamp)
-                } catch (e: Exception) {
-                    Log.e("DashboardFragment", "Error reading process data: ${e.message}")
-                    binding.editTextVolumen.setText("Error")
-                    binding.editTextCaudal.setText("Error")
-                    binding.editTextTemperatura.setText("Error")
-                    binding.editTextStatus.setText("Error")
-                    binding.editTextTimestamp.setText("Error")
-                }
+                Toast.makeText(context, "Datos Proceso Actualizados", Toast.LENGTH_SHORT).show()
+
+                // Usar los campos ya parseados del objeto ProcessData para actualizar la UI
+                binding.editTextVolume.setText(processData.volume.toString())
+                binding.editTextFlow.setText(processData.flowRate.toString())
+                binding.editTextTemperature.setText(processData.temperature.toString())
+                binding.editTextBattery.setText(processData.battery.toString())
+                binding.editTextStatus.setText(processData.statusFlags.toString())
+                binding.editTextDirectFlowPeriod.setText(processData.directFlowPeriod.toString())
+                binding.editTextReverseFlowPeriod.setText(processData.reverseFlowPeriod.toString())
+                binding.editTextNoFlowPeriod.setText(processData.noFlowPeriod.toString())
+                binding.editTextLeakagePeriod.setText(processData.leakageFlowPeriod.toString())
             } else {
-                binding.editTextVolumen.setText("No hay datos")
-                binding.editTextCaudal.setText("No hay datos")
-                binding.editTextTemperatura.setText("No hay datos")
+                // Mensaje si no hay datos de proceso disponibles.
+                binding.editTextVolume.setText("No hay datos")
+                binding.editTextFlow.setText("No hay datos")
+                binding.editTextTemperature.setText("No hay datos")
+                binding.editTextBattery.setText("No hay datos")
                 binding.editTextStatus.setText("No hay datos")
-                binding.editTextTimestamp.setText("No hay datos")
+                binding.editTextDirectFlowPeriod.setText("No hay datos")
+                binding.editTextReverseFlowPeriod.setText("No hay datos")
+                binding.editTextNoFlowPeriod.setText("No hay datos")
+                binding.editTextLeakagePeriod.setText("No hay datos")
             }
         }
+
+        // --- Observa Datos de Ingenieria (0x85) ---
+        sharedNfcViewModel.engineeringData.observe(viewLifecycleOwner) { engineeringData ->
+            if (engineeringData != null) {
+
+                Toast.makeText(context, "Datos Ingenieria Actualizados", Toast.LENGTH_SHORT).show()
+
+                // Usar los campos ya parseados del objeto EngineeringData para actualizar la UI
+                binding.editTextVolumeLiters.setText(engineeringData.volumeLiters.toString())
+                binding.editTextVolumeLitersUncal.setText(engineeringData.volumeLitersUncal.toString())
+                binding.editTextTemperatureUncal.setText(engineeringData.temperatureUncal.toString())
+                binding.editTextFlowUncal.setText(engineeringData.flowUncal.toString())
+                binding.editTextTtof.setText(engineeringData.ttof.toString())
+                binding.editTextDtof.setText(engineeringData.dtof.toString())
+                binding.editTextStdDev.setText(engineeringData.stdDev.toString())
+                binding.editTextTime.setText(engineeringData.time.toString())
+                binding.editTextChipTemperature.setText(engineeringData.chipTemperature.toString())
+                binding.editTextLux.setText(engineeringData.lux.toString())
+            } else {
+                // Mensaje si no hay datos de proceso disponibles.
+                binding.editTextVolumeLiters.setText("No hay datos")
+                binding.editTextVolumeLitersUncal.setText("No hay datos")
+                binding.editTextTemperatureUncal.setText("No hay datos")
+                binding.editTextFlowUncal.setText("No hay datos")
+                binding.editTextTtof.setText("No hay datos")
+                binding.editTextDtof.setText("No hay datos")
+                binding.editTextStdDev.setText("No hay datos")
+                binding.editTextTime.setText("No hay datos")
+                binding.editTextChipTemperature.setText("No hay datos")
+                binding.editTextLux.setText("No hay datos")
+            }
+        }
+
+        // --- Observa Datos de Configuración (0x83) ---
+        // Se mantiene el observador para que el ViewModel guarde la data, aunque la UI de visualización esté en otro Fragment.
+        sharedNfcViewModel.configData.observe(viewLifecycleOwner) { configData ->
+            // Sin acción en la UI de Dashboard
+        }
+
+    }
+
+    /**
+     * Configura los listeners para la interacción del usuario.
+     * Incluye los tres comandos de lectura existentes (0x01, 0x02, 0x03) y el nuevo (0x05).
+     */
+    private fun setupListeners() {
+
+        // Comando 0x01: Solicitar bloque de Identidad
+        binding.requestIdentityButton.setOnClickListener {
+            val identityCommand: Byte = 0x01.toByte()
+            sharedNfcViewModel.requestNextCommand(identityCommand)
+            Toast.makeText(context, "Comando 0x01 (Identidad) solicitado. Acercar TAG para enviar.", Toast.LENGTH_SHORT).show()
+        }
+
+        // Comando 0x02: Solicitar bloque de Proceso
+        binding.requestProcessButton.setOnClickListener {
+            val processCommand: Byte = 0x02.toByte()
+            sharedNfcViewModel.requestNextCommand(processCommand)
+            Toast.makeText(context, "Comando 0x02 (Proceso) solicitado. Acercar TAG para enviar.", Toast.LENGTH_SHORT).show()
+        }
+
+        // Comando 0x03: Solicitar bloque de Configuración
+        // ASUMIMOS que el ID del botón es 'requestConfigButton'
+        binding.requestConfigButton.setOnClickListener {
+            val configCommand: Byte = 0x03.toByte()
+            sharedNfcViewModel.requestNextCommand(configCommand)
+            Toast.makeText(context, "Comando 0x03 (Configuración) solicitado. Acercar TAG para enviar.", Toast.LENGTH_SHORT).show()
+        }
+
+        // Comando 0x05: Solicitar bloque de Datos Extra (¡NUEVO!)
+        // ASUMIMOS que el ID del botón es 'requestExtraDataButton'
+        binding.requestEngineeringButton.setOnClickListener {
+            val extraCommand: Byte = 0x05.toByte()
+            sharedNfcViewModel.requestNextCommand(extraCommand)
+            Toast.makeText(context, "Comando 0x05 (Bloque Ingenieria) solicitado. Acercar TAG para enviar.", Toast.LENGTH_SHORT).show()
+        }
+
     }
 }
-

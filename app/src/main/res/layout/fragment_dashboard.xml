@@ -78,9 +78,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Volumen">
+                android:hint="Volumen [m3]">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_volumen"
+                    android:id="@+id/edit_text_volume"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:focusable="false"/>
@@ -90,9 +90,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Caudal">
+                android:hint="Caudal [L/h]">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_caudal"
+                    android:id="@+id/edit_text_flow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:focusable="false"/>
@@ -102,9 +102,21 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Temperatura">
+                android:hint="Temperatura [°C]">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_temperatura"
+                    android:id="@+id/edit_text_temperature"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Bateria [%]">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_battery"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:focusable="false"/>
@@ -122,24 +134,218 @@
                     android:focusable="false"/>
             </com.google.android.material.textfield.TextInputLayout>
 
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:background="?android:attr/listDivider"/>
+
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Timestamp">
+                android:hint="Periodo Caudal Directo [min]">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_timestamp"
+                    android:id="@+id/edit_text_direct_flow_period"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:focusable="false"/>
             </com.google.android.material.textfield.TextInputLayout>
 
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Periodo Caudal Inverso [min]">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_reverse_flow_period"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Periodo Sin Caudal [min]">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_no_flow_period"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Periodo con fuga [min]">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_leakage_period"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:background="?android:attr/listDivider"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Volumen [L]">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_volume_liters"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Volumen sin Calibrar [L]">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_volume_liters_uncal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Temperatura sin Calibrar [°C]">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_temperature_uncal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Caudal sin Calibrar [L/h]">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_flow_uncal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="TToF">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_ttof"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="DToF">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_dtof"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="StdDev">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_std_dev"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Time [sec]">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_time"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Chip Temperature">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_chip_temperature"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Lux">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_lux"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:background="?android:attr/listDivider"/>
+
             <Button
-                android:id="@+id/timestampButton"
+                android:id="@+id/requestIdentityButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Timestamp" />
+                android:text="Actualizar Identidad" />
 
+            <Button
+                android:id="@+id/requestProcessButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Actualizar Proceso" />
+
+            <Button
+                android:id="@+id/requestConfigButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Actualizar Configuracion" />
+
+            <Button
+                android:id="@+id/requestEngineeringButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Actualizar Ingenieria" />
 
         </LinearLayout>
     </ScrollView>
