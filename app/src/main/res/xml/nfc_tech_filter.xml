@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 <tech-list>
-    <tech-alias>NfcA</tech-alias>
-    <tech-alias>NfcB</tech-alias>
-    <tech-alias>NfcF</tech-alias>
     <tech-alias>NfcV</tech-alias>
     <tech-alias>Ndef</tech-alias>
-    <tech-alias>IsoDep</tech-alias>
-    <tech-alias>MifareClassic</tech-alias>
-    <tech-alias>MifareUltralight</tech-alias>
 </tech-list>
 </resources>

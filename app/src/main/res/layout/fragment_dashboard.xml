@@ -31,6 +31,7 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="24dp"/>
 
+            <!-- Bloque de Identidad -->
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -74,6 +75,7 @@
                 android:layout_marginBottom="16dp"
                 android:background="?android:attr/listDivider"/>
 
+            <!-- Bloque de Proceso -->
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -141,6 +143,7 @@
                 android:layout_marginBottom="16dp"
                 android:background="?android:attr/listDivider"/>
 
+            <!-- Bloque de Configuración -->
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -196,6 +199,7 @@
                 android:layout_marginBottom="16dp"
                 android:background="?android:attr/listDivider"/>
 
+            <!-- Bloque de Ingeniería -->
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -323,6 +327,21 @@
                 android:layout_marginBottom="16dp"
                 android:background="?android:attr/listDivider"/>
 
+            <!-- TextView para mensajes de estado/feedback (Corregido) -->
+            <TextView
+                android:id="@+id/text_message"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"
+                android:gravity="center"
+                android:text="Esperando conexión NFC..."
+                android:textColor="?attr/colorPrimary"
+                android:textSize="16sp"
+                android:textStyle="italic"
+                tools:text="Comando 0x01 enviado. Esperando respuesta..."/>
+
+            <!-- Botones de solicitud de datos -->
             <Button
                 android:id="@+id/requestIdentityButton"
                 android:layout_width="wrap_content"
@@ -350,4 +369,3 @@
         </LinearLayout>
     </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>
-

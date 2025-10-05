@@ -54,7 +54,7 @@
             android:text="Registro N° 3 (Configuración):\n"
             android:layout_marginBottom="8dp"/>
 
-        <!-- Registro N° 3 (Configuración) -->
+        <!-- Registro RAW: CORRECCIÓN DE LAYOUT_WIDTH: match_match -> match_parent -->
         <TextView
             android:id="@+id/textViewRawRecords"
             android:layout_width="match_parent"
