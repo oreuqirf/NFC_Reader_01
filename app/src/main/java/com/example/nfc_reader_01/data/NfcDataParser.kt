@@ -1,4 +1,4 @@
-package com.example.nfc_reader_01
+package com.example.nfc_reader_01.data
 
 import android.nfc.NdefMessage
 import android.nfc.NdefRecord

@@ -1,10 +1,9 @@
 package com.example.nfc_reader_01
 
-import android.content.Intent
 import android.nfc.NfcAdapter
 import android.nfc.Tag
-import android.nfc.TagLostException
-import android.nfc.tech.NfcV
+import android.nfc.NdefMessage
+import android.nfc.tech.Ndef
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -20,6 +19,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.lifecycle.lifecycleScope
+import java.io.IOException
+import java.nio.charset.Charset
+import com.example.nfc_reader_01.data.NfcTagInfo // <-- IMPORTAMOS LA NUEVA CLASE DE DATOS
 
 // --------------------------------------------------------------------------
 // DEFINICIÓN DE CONSTANTES
@@ -27,8 +29,6 @@ import androidx.lifecycle.lifecycleScope
 private const val TAG_NFC_LOG = "NFC_PROTOCOL"
 private const val TAG_NFC_ERROR = "NFC_ERROR"
 private const val TAG_NFC_DEBUG = "NFC_DEBUG"
-// CONSTANTE RE-AGREGADA: Aumentamos el timeout a 3000ms para mayor seguridad.
-private const val NFCV_TRANSCEIVE_TIMEOUT_MS = 3000
 
 // La clase debe implementar NfcAdapter.ReaderCallback para usar Reader Mode
 class MainActivity : AppCompatActivity(), NfcInteractionListener, NfcAdapter.ReaderCallback {
@@ -48,14 +48,12 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener, NfcAdapter.Rea
         // ----------------------------------------------------------------
         // 1. INICIALIZACIÓN: ViewModel, Navegación y UI
         // ----------------------------------------------------------------
-        // El ViewModel es scopeado a la Activity para que los Fragments compartan estado
         sharedNfcViewModel = ViewModelProvider(this).get(SharedNfcViewModel::class.java)
 
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_activity_main) as NavHostFragment
         navController = navHostFragment.navController
 
         val navView: BottomNavigationView = findViewById(R.id.nav_view)
-        // Corrección: Se utiliza solo la configuración correcta del NavController.
         navView.setupWithNavController(navController)
 
         // ----------------------------------------------------------------
@@ -69,28 +67,32 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener, NfcAdapter.Rea
             Toast.makeText(this, "NFC desactivado. Por favor, actívelo.", Toast.LENGTH_LONG).show()
         }
 
-        logProtocolActivity("Aplicación iniciada. Lógica NFC configurada para Reader Mode.")
+        logProtocolActivity("Aplicación iniciada. Lógica NFC configurada para Reader Mode (NDEF).")
     }
 
     /**
      * Habilita el Reader Mode al entrar en la actividad.
-     * FLAGS: Solo NfcV.
+     * Ahora escucha todas las tecnologías compatibles con NDEF (A, B, F, V).
      */
     override fun onResume() {
         super.onResume()
         if (nfcAdapter?.isEnabled == true) {
 
-            // Usamos FLAG_READER_NFC_V para escuchar estrictamente tags ISO 15693 (NfcV)
-            val flags = NfcAdapter.FLAG_READER_NFC_V
+            // FLAG_READER_NFC_A, B, F, V para capturar todas las tecnologías NDEF compatibles
+            val flags = NfcAdapter.FLAG_READER_NFC_A or
+                    NfcAdapter.FLAG_READER_NFC_B or
+                    NfcAdapter.FLAG_READER_NFC_F or
+                    NfcAdapter.FLAG_READER_NFC_V
+
             val options = Bundle()
 
             nfcAdapter?.enableReaderMode(
                 this,      // La actividad que recibe el callback
                 this,      // La instancia de NfcAdapter.ReaderCallback (esta clase)
                 flags,     // Las tecnologías que buscamos
-                options    // Opciones adicionales (ej. polling delay)
+                options    // Opciones adicionales
             )
-            logProtocolActivity("Reader Mode habilitado estrictamente para NfcV (Bypass al error de Intent).")
+            logProtocolActivity("Reader Mode habilitado para tecnologías NDEF.")
         }
     }
 
@@ -111,196 +113,166 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener, NfcAdapter.Rea
      * Se llama cuando se detecta un TAG NFC mientras el Reader Mode está activo.
      */
     override fun onTagDiscovered(tag: Tag?) {
-        if (tag != null) {
-            logProtocolActivity("TAG detectado vía Reader Mode. Iniciando transacción...")
-            handleTagDiscovery(tag)
-        } else {
+        if (tag == null) {
             Log.e(TAG_NFC_ERROR, "onTagDiscovered devolvió un objeto Tag nulo.")
+            return
         }
+
+        logProtocolActivity("TAG detectado vía Reader Mode. Intentando obtener NDEF...")
+        handleTagDiscovery(tag)
     }
 
     /**
      * -------------------------------------------------------------------
-     * LÓGICA DE COMUNICACIÓN NFC (EJECUCIÓN DEL COMANDO)
+     * LÓGICA DE COMUNICACIÓN NFC (LECTURA NDEF)
      * -------------------------------------------------------------------
      */
     private fun handleTagDiscovery(tag: Tag) {
-        // Lanzar una corrutina para realizar operaciones de red y NFC (I/O)
+        // Lanzar una corrutina para realizar operaciones de NFC (I/O)
         lifecycleScope.launch(Dispatchers.IO) {
 
-            // 1. Lectura segura del LiveData en el HILO PRINCIPAL
-            val (command: Byte?, dataToWriteRaw: ByteArray?) = withContext(Dispatchers.Main) {
-                // Leemos directamente del ViewModel compartido de la Activity
-                Pair(sharedNfcViewModel.commandToSend.value, sharedNfcViewModel.configData.value)
-            }
-
-            // Verificación y Lógica Defensiva de Payload
-            if (command == null) {
-                Log.e(TAG_NFC_ERROR, "Comando nulo. Abortando transceive.")
-                return@launch
-            }
-
-            // **CORRECCIÓN DEFENSIVA EXTENDIDA**: Incluir el 0x03.
-            // Si el payload es NULL para un comando de lectura (0x01, 0x02, 0x03),
-            // forzamos el payload a ser el bloque inicial (0x00).
-            val isReadCommandRequiringBlockIndex =
-                command == 0x01.toByte() || command == 0x02.toByte() || command == 0x03.toByte()
-
-            val finalDataToWrite = if (dataToWriteRaw == null && isReadCommandRequiringBlockIndex) {
-                Log.w(TAG_NFC_DEBUG, "Payload nulo detectado para comando de lectura (0x${String.format("%02X", command)}). Forzando a [0x00].")
-                byteArrayOf(0x00.toByte())
-            } else {
-                dataToWriteRaw
-            }
-
-            val commandHex = String.format("%02X", command)
             val tagIdHex = tag.id.toHexString()
-            val payloadSize = finalDataToWrite?.size ?: 0
+            // Obtener el nombre simple de la primera tecnología detectada
+            val primaryTech = tag.techList.firstOrNull()?.substringAfterLast('.') ?: "Unknown"
 
-            // Log final para confirmar el valor que se va a usar
-            Log.d(TAG_NFC_DEBUG, "DataToWrite (Payload) en handleTagDiscovery (Final): ${finalDataToWrite?.toHexString() ?: "NULL"}")
+            // --- 1. CONFIGURACIÓN INICIAL DEL ESTADO DEL TAG ---
+            // Creamos el objeto NfcTagInfo con los datos iniciales
+            var tagInfo = NfcTagInfo(
+                tagIdHex = tagIdHex,
+                techType = primaryTech,
+                ndefMessage = null // Se actualizará si la lectura NDEF es exitosa
+            )
 
-            // 2. Notificar inmediatamente que el TAG fue capturado
-            sharedNfcViewModel.setNfcTag(tagIdHex)
-            logProtocolActivity("TAG ${tagIdHex} detectado. Comando en espera: 0x$commandHex.")
+            // Enviamos el objeto al ViewModel. Esto reemplaza los antiguos setNfcTagId y setNfcTechType.
+            sharedNfcViewModel.setNfcTagInfo(tagInfo)
+            logProtocolActivity("TAG detectado. ID: $tagIdHex. Tech: $primaryTech")
+            // --------------------------------------------------
 
+            // 2. Intentar obtener la tecnología Ndef
+            val ndef = Ndef.get(tag)
 
-            // 3. Intentar obtener la instancia NfcV
-            val nfcvTag = NfcV.get(tag)
-
-            if (nfcvTag == null) {
-                logProtocolActivity("Error inesperado: El TAG detectado no se pudo convertir a NfcV a pesar del filtro.")
+            if (ndef == null) {
+                logProtocolActivity("Etiqueta detectada ($tagIdHex), pero no soporta el formato NDEF.")
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@MainActivity, "TAG no compatible (Se requiere NfcV).", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@MainActivity, "Error: Etiqueta detectada, pero no es NDEF compatible.", Toast.LENGTH_LONG).show()
                 }
-                sharedNfcViewModel.setNfcTag(null)
+                // Limpiamos todo el objeto NfcTagInfo
+                sharedNfcViewModel.setNfcTagInfo(null)
                 return@launch
             }
 
-            // >> AJUSTE DEL TIMEOUT NfcV (RE-IMPLEMENTADO CON SINTAXIS EXPLÍCITA DE JAVA)
-            try {
-                // Si la propiedad 'timeout' de Kotlin falla, usamos el método explícito de Java, getTimeout().
-                // NfcV hereda estos métodos de BasicTagTechnology.
-                if (nfcvTag.getTimeout() < NFCV_TRANSCEIVE_TIMEOUT_MS) {
-                    // Usamos el método explícito de Java, setTimeout(), para forzar la resolución.
-                    nfcvTag.setTimeout(NFCV_TRANSCEIVE_TIMEOUT_MS)
-                    Log.d(TAG_NFC_DEBUG, "Timeout de NfcV ajustado a ${NFCV_TRANSCEIVE_TIMEOUT_MS}ms para evitar TagLostException.")
-                }
-            } catch (e: Exception) {
-                // Capturamos la excepción si sigue fallando la referencia, pero no detenemos la ejecución.
-                Log.e(TAG_NFC_ERROR, "Fallo (esperado/compilador) al ajustar el timeout de NfcV. Usando valor por defecto. Error: ${e.message}")
-            }
+            Log.i(TAG_NFC_LOG, "TAG NDEF detectado. Iniciando conexión...")
 
-            // Ejecutar la comunicación NFC
-            var response: ByteArray? = null
+            var responseMessage: NdefMessage? = null
             var success = false
 
             try {
                 // Conectar al TAG
-                nfcvTag.connect()
+                ndef.connect()
 
-                if (nfcvTag.isConnected) {
-                    // LOG CORREGIDO: Usar el tamaño real del payload
-                    logProtocolActivity("Conectado a TAG NfcV. Enviando comando 0x$commandHex (Payload: $payloadSize bytes)...")
+                // Intentar leer el mensaje NDEF
+                responseMessage = ndef.ndefMessage
+                success = true // Si la conexión y la lectura no lanzaron excepción
 
-                    // Construir el comando ISO 15693 completo
-                    val commandPayload = buildNfcCommand(command, finalDataToWrite, tag.id)
+                logProtocolActivity("Lectura NDEF finalizada con éxito.")
 
-                    // LÍNEA CRÍTICA: transceive
-                    response = nfcvTag.transceive(commandPayload)
-                    success = true
-
-                    // Notificación en el hilo principal
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@MainActivity, "Comando 0x$commandHex enviado. Procesando respuesta...", Toast.LENGTH_SHORT).show()
+                // 3. Procesar la respuesta para el Toast (lógica visual)
+                val messageText = if (responseMessage != null) {
+                    // ... (Lógica de extracción de texto para el Toast)
+                    val firstRecord = responseMessage.records.firstOrNull()
+                    if (firstRecord != null && firstRecord.tnf == 1.toShort()) { // TNF_WELL_KNOWN
+                        val textPayload = firstRecord.payload
+                        val textEncoding = if ((textPayload[0].toInt() and 0x80) == 0) "UTF-8" else "UTF-16"
+                        val languageCodeLength = textPayload[0].toInt() and 0x3F
+                        String(
+                            textPayload,
+                            1 + languageCodeLength,
+                            textPayload.size - 1 - languageCodeLength,
+                            Charset.forName(textEncoding)
+                        ).take(30) + "..."
+                    } else {
+                        "Mensaje NDEF con ${responseMessage.records.size} registro(s) no text."
                     }
-
                 } else {
-                    logProtocolActivity("Fallo al conectar con el TAG, nfcvTag.isConnected es falso.")
+                    "Etiqueta NDEF vacía."
                 }
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, "Lectura NDEF OK. $messageText", Toast.LENGTH_LONG).show()
+                }
+
+            } catch (e: IOException) {
+                // IOException captura fallos de I/O y pérdida de etiqueta
+                val errorMsg = "Fallo NDEF: Se perdió la etiqueta durante la conexión o lectura. ${e.message}"
+                Log.e(TAG_NFC_ERROR, errorMsg, e)
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, errorMsg, Toast.LENGTH_LONG).show()
+                }
+                success = false
+
             } catch (e: Exception) {
-                // Manejo de excepciones (ej. I/O Exception por desconexión o comando inválido)
-                Log.e(TAG_NFC_ERROR, "Error en transceive: ${e.message}", e)
+                // Manejo de otros errores inesperados
+                val errorMsg = "Error inesperado durante la lectura NDEF: ${e.message}"
+                Log.e(TAG_NFC_ERROR, errorMsg, e)
 
-                // CORRECCIÓN: Manejo específico de TagLostException
-                when (e) {
-                    is TagLostException -> {
-                        val userMessage = "Error de Conexión: La comunicación con el chip se perdió (Timeout del sistema). Mueva el móvil más cerca del TAG y manténgalo inmóvil para el siguiente intento."
-                        logProtocolActivity("FATAL ERROR: $userMessage")
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@MainActivity, userMessage, Toast.LENGTH_LONG).show()
-                        }
-                    }
-                    else -> {
-                        logProtocolActivity("FATAL ERROR: Fallo en transceive o conexión: ${e.message}")
-                    }
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, errorMsg, Toast.LENGTH_LONG).show()
                 }
+                success = false
             } finally {
+                // 4. Asegurar el cierre de la conexión
                 try {
-                    // CERRAR LA CONEXIÓN es ABSOLUTAMENTE CRUCIAL
-                    if (nfcvTag.isConnected) {
-                        nfcvTag.close()
-                        logProtocolActivity("Conexión con TAG cerrada.")
+                    if (ndef.isConnected) {
+                        ndef.close()
+                        logProtocolActivity("Conexión NDEF cerrada.")
                     }
-                } catch (e: Exception) {
-                    Log.e(TAG_NFC_ERROR, "Error al intentar cerrar conexión: ${e.message}")
+                } catch (e: IOException) {
+                    // Ignorar errores al cerrar
                 }
 
-                // 4. Informar el resultado de la comunicación al ViewModel
-                sharedNfcViewModel.handleNfcResponse(response, success)
+                // 5. Informar el resultado del mensaje NDEF al ViewModel
+                if (success) {
+                    // Actualiza solo el campo ndefMessage del objeto NfcTagInfo ya existente
+                    sharedNfcViewModel.updateNdefMessage(responseMessage)
+                } else {
+                    // Si falló, aseguramos que no haya un mensaje NDEF en el estado
+                    sharedNfcViewModel.updateNdefMessage(null)
+                }
 
-                // 5. Limpiar el estado del TAG
-                sharedNfcViewModel.setNfcTag(null)
+                // 6. Limpiar el estado completo del TAG (usando el nuevo método)
+                sharedNfcViewModel.setNfcTagInfo(null)
             }
         } // Fin de lifecycleScope.launch
     }
 
-    /**
-     * Construye el ByteArray del comando a enviar (ISO 15693: Flags + UID + Command + Data).
-     */
-    private fun buildNfcCommand(commandId: Byte, data: ByteArray?, tagUid: ByteArray): ByteArray {
-        // Flags ajustados a 0x22 (Modo Direccionado y High Data Rate)
-        val flags = 0x22.toByte() // Request Flags: Addressed mode (Bit 5), High Data Rate (Bit 1)
-        val reversedTagUid = tagUid.reversedArray() // NfcV usa el UID en orden invertido
-
-        val commandList = mutableListOf<Byte>()
-
-        // 1. Flags
-        commandList.add(flags)
-
-        // 2. UID (8 bytes, invertido) - SOLO se incluye porque Address Flag (0x20) está encendido.
-        commandList.addAll(reversedTagUid.toTypedArray())
-
-        // 3. Command ID
-        commandList.add(commandId)
-
-        // 4. Payload Data
-        data?.forEach { commandList.add(it) }
-
-        val payloadHex = commandList.toByteArray().toHexString()
-        logProtocolActivity("Comando ISO 15693 construido (Flags: 0x${String.format("%02X", flags)} + UID + Command + Data): $payloadHex")
-
-        return commandList.toByteArray()
-    }
 
     // ----------------------------------------------------------------
     // IMPLEMENTACIONES DE NfcInteractionListener (desde Fragments)
     // ----------------------------------------------------------------
+    // Estas funciones son llamadas por los Fragments para interactuar con la actividad
+    // y solicitar una acción NFC.
+
     override fun navigateToDashboard() {
         navController.navigate(R.id.navigation_dashboard)
         logProtocolActivity("Navegación solicitada al Dashboard (Lector).")
     }
 
     override fun requestNextCommand(commandId: Byte) {
-        val message = "NFC Command requested: 0x${String.format("%02X", commandId)}"
+        val message = "NFC Command 0x${String.format("%02X", commandId)} solicitado, pero estamos en modo NDEF. Solo lectura estándar."
         logProtocolActivity(message)
-        sharedNfcViewModel.sendCommand(commandId)
+
+        Toast.makeText(this, "Modo NDEF activo: Solo se permite la lectura estándar.", Toast.LENGTH_LONG).show()
+
+        // sharedNfcViewModel.sendCommand(commandId) // Comentado para evitar comandos no soportados
     }
 
     override fun requestWriteConfig() {
-        val message = "Write configuration requested."
+        val message = "Write configuration requested. Write operations require specific NDEF logic."
         logProtocolActivity(message)
-        sharedNfcViewModel.requestWriteMode() // Esta función solo loguea por ahora
+        // sharedNfcViewModel.requestWriteMode() // Mantener si la lógica de escritura NDEF se implementa después
+
+        Toast.makeText(this, "La escritura NDEF no está implementada en este modo.", Toast.LENGTH_LONG).show()
     }
 
     /**
@@ -311,5 +283,8 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener, NfcAdapter.Rea
         sharedNfcViewModel.addProtocolLog(message)
     }
 
+    /**
+     * Función de extensión para convertir un ByteArray a una cadena hexadecimal.
+     */
     private fun ByteArray.toHexString(): String = joinToString(" ") { "%02x".format(it) }
 }
