@@ -27,8 +27,8 @@ import androidx.lifecycle.lifecycleScope
 private const val TAG_NFC_LOG = "NFC_PROTOCOL"
 private const val TAG_NFC_ERROR = "NFC_ERROR"
 private const val TAG_NFC_DEBUG = "NFC_DEBUG"
-// CONSTANTE AGREGADA: Aumentamos el timeout de 1000ms (default) a 2000ms
-private const val NFCV_TRANSCEIVE_TIMEOUT_MS = 2000
+// CONSTANTE RE-AGREGADA: Aumentamos el timeout a 3000ms para mayor seguridad.
+private const val NFCV_TRANSCEIVE_TIMEOUT_MS = 3000
 
 // La clase debe implementar NfcAdapter.ReaderCallback para usar Reader Mode
 class MainActivity : AppCompatActivity(), NfcInteractionListener, NfcAdapter.ReaderCallback {
@@ -177,18 +177,18 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener, NfcAdapter.Rea
                 return@launch
             }
 
-            // >> AJUSTE DEL TIMEOUT NfcV (CORRECCIÓN FINAL: Uso explícito de métodos de Java)
-            // LÍNEA CRÍTICA: nfcvTag.getTimeout() y nfcvTag.setTimeout()
+            // >> AJUSTE DEL TIMEOUT NfcV (RE-IMPLEMENTADO CON SINTAXIS EXPLÍCITA DE JAVA)
             try {
-                // Usamos el método explícito de Java, getTimeout(), ya que la propiedad de Kotlin falla.
+                // Si la propiedad 'timeout' de Kotlin falla, usamos el método explícito de Java, getTimeout().
                 // NfcV hereda estos métodos de BasicTagTechnology.
                 if (nfcvTag.getTimeout() < NFCV_TRANSCEIVE_TIMEOUT_MS) {
-                    // Usamos el método explícito de Java, setTimeout(), ya que la propiedad de Kotlin falla.
+                    // Usamos el método explícito de Java, setTimeout(), para forzar la resolución.
                     nfcvTag.setTimeout(NFCV_TRANSCEIVE_TIMEOUT_MS)
                     Log.d(TAG_NFC_DEBUG, "Timeout de NfcV ajustado a ${NFCV_TRANSCEIVE_TIMEOUT_MS}ms para evitar TagLostException.")
                 }
             } catch (e: Exception) {
-                Log.e(TAG_NFC_ERROR, "Fallo al ajustar el timeout de NfcV: ${e.message}")
+                // Capturamos la excepción si sigue fallando la referencia, pero no detenemos la ejecución.
+                Log.e(TAG_NFC_ERROR, "Fallo (esperado/compilador) al ajustar el timeout de NfcV. Usando valor por defecto. Error: ${e.message}")
             }
 
             // Ejecutar la comunicación NFC
