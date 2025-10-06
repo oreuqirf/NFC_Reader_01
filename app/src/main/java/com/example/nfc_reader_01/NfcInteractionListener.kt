@@ -20,7 +20,7 @@ interface NfcInteractionListener {
     fun requestNextCommand(commandId: Byte)
 
     /**
-     * Solicita al ViewModel que prepare y ejecute el mensaje de escritura de configuración (0x04)
+     * Solicita al ViewModel que prepare y ejecute el mensaje de escritura de configuración (0x05)
      * en el próximo escaneo del TAG.
      */
     fun requestWriteConfig()

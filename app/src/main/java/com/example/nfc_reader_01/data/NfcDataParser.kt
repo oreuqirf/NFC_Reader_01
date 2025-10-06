@@ -9,6 +9,7 @@ import java.util.Date
 import java.util.Locale
 import java.nio.charset.Charset
 import java.util.concurrent.TimeUnit
+import kotlin.experimental.and
 
 
 // =================================================================
@@ -16,7 +17,7 @@ import java.util.concurrent.TimeUnit
 // =================================================================
 
 /**
- * Bloque 0x81: Datos de Identidad (12 bytes).
+ * Bloque 0x81: Datos de Identidad (12 bytes: Int + Int + Int).
  */
 data class IdentityData(
     val deviceId: Long,
@@ -146,8 +147,9 @@ object NfcDataParser {
      * Convierte el ByteArray de 36 bytes (respuesta 0x82) en un objeto ProcessData estructurado.
      */
     fun parseProcessData(processBytes: ByteArray): ProcessData {
+        // El tamaño esperado es 36 bytes (9 Ints).
         if (processBytes.size != 36) {
-            throw IllegalArgumentException("El tamaño de datos de proceso debe ser 36 bytes. Recibido: ${processBytes.size}")
+            throw IllegalArgumentException("El tamaño de datos de proceso debe ser 36 bytes (9 Ints). Recibido: ${processBytes.size}")
         }
 
         val buffer = ByteBuffer.wrap(processBytes).order(ByteOrder.LITTLE_ENDIAN)
@@ -170,7 +172,7 @@ object NfcDataParser {
      * La respuesta del TAG (0x83) debe incluir el timestamp (96 bytes total).
      */
     fun parseConfigData(configBytes: ByteArray): ConfigurationData {
-        // La respuesta 0x83 devuelve 23 floats + 1 int = 96 bytes.
+        // El tamaño esperado es 96 bytes (23 Floats + 1 Int).
         if (configBytes.size != 96) {
             throw IllegalArgumentException("El tamaño de datos de configuración debe ser 96 bytes (23F + 1I). Recibido: ${configBytes.size}")
         }
@@ -208,24 +210,37 @@ object NfcDataParser {
 
     /**
      * Convierte el ByteArray de 12 bytes (respuesta 0x81) en IdentityData estructurada.
+     *
+     * ESTRUCTURA DE 12 BYTES (3 x Int):
+     * 1. Device ID (Int) - 4 bytes
+     * 2. Firmware Version (Int) - 4 bytes
+     * 3. Configuration Timestamp (Int) - 4 bytes
      */
     fun parseIdentityData(identityBytes: ByteArray): IdentityData {
-        if (identityBytes.size != 12) {
-            throw IllegalArgumentException("El tamaño de datos de identidad debe ser 12 bytes.")
+        // El tamaño esperado debe ser 12 bytes.
+        val expectedSize = 12
+        if (identityBytes.size != expectedSize) {
+            throw IllegalArgumentException("El tamaño de datos de identidad (0x81) debe ser $expectedSize bytes (3 x Int). Recibido: ${identityBytes.size}")
         }
 
         val buffer = ByteBuffer.wrap(identityBytes).order(ByteOrder.LITTLE_ENDIAN)
 
+        // 1. Device ID (4 bytes) -> Se lee como Int y se convierte a Long sin signo.
         val signedDeviceIdRaw = buffer.getInt()
+        // Usamos and 0xFFFFFFFFL para manejar correctamente el valor de 32 bits como un Long sin signo.
         val deviceIdRaw = signedDeviceIdRaw.toLong() and 0xFFFFFFFFL
 
+        // 2. Firmware Version (4 bytes)
         val firmwareVersionRaw    = buffer.getInt()
         val firmwareVersionLast   = (firmwareVersionRaw and 0xFF).toByte()
         val firmwareVersionMinor  = (firmwareVersionRaw shr 8 and 0xFF).toByte()
         val firmwareVersionMain   = (firmwareVersionRaw shr 16 and 0xFF).toByte()
         val firmwareVersionString = String.format(Locale.US, "%d.%d.%d", firmwareVersionMain, firmwareVersionMinor, firmwareVersionLast)
 
+        // 3. Configuration Timestamp (4 bytes) -> Leído como Int
         val configTimestamp = buffer.getInt()
+
+        // Asumimos que el timestamp Unix es en segundos y lo convertimos a milisegundos para Date
         val dateMillis = configTimestamp.toLong() * 1000
         val date = Date(dateMillis)
         val formatter = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault())
@@ -239,9 +254,10 @@ object NfcDataParser {
     }
 
     /**
-     * Convierte el ByteArray de 36 bytes (respuesta 0x82) en un objeto ProcessData estructurado.
+     * Convierte el ByteArray de 40 bytes (respuesta 0x85) en un objeto EngineeringData estructurado.
      */
     fun parseEngineeringData(engineeringBytes: ByteArray): EngineeringData {
+        // El tamaño esperado es 40 bytes (10 Ints).
         if (engineeringBytes.size != 40) {
             throw IllegalArgumentException("El tamaño de datos de Ingenieria debe ser 40 bytes. Recibido: ${engineeringBytes.size}")
         }
@@ -274,8 +290,8 @@ object NfcDataParser {
      */
     fun serializeConfigData(config: ConfigurationData): ByteArray {
 
-        // 🚨 PASO CRÍTICO: Actualizar la fecha de la configuración
-        // Obtenemos el tiempo actual en milisegundos y lo convertimos a segundos.
+        // PASO CRÍTICO: Actualizar la fecha de la configuración
+        // Obtenemos el tiempo actual en milisegundos y lo convertimos a segundos (Int de 4 bytes).
         val currentEpochSeconds = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()).toInt()
 
         // ASIGNACIÓN CRÍTICA: 96 bytes (23 floats + 1 int = 24 elementos * 4 bytes)
@@ -304,7 +320,7 @@ object NfcDataParser {
         buffer.putFloat(config.fcQ3_flow)
         buffer.putFloat(config.fcQ3_error)
         buffer.putFloat(config.fcQ3_temperature)
-        buffer.putInt(currentEpochSeconds)
+        buffer.putInt(currentEpochSeconds) // Escribimos el nuevo timestamp
         return buffer.array() // Retorna exactamente 96 bytes.
     }
 

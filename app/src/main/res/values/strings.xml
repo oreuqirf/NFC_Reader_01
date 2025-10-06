@@ -1,4 +1,5 @@
 <resources>
+    <!-- Cadenas de la aplicación (proporcionadas originalmente) -->
     <string name="app_name">NFC_Reader_01</string>
     <string name="title_home">Home</string>
     <string name="title_dashboard">Dashboard</string>
@@ -7,4 +8,44 @@
     <string name="nfc_status_placeholder">Estatus de NFC</string>
     <string name="nfc_characteristics_placeholder">Características de la etiqueta:</string>
     <string name="nfc_data_placeholder">Contenido de los registros:</string>
+
+    <!-- Título de la pantalla Dashboard -->
+    <string name="title_nfc_data">Datos de la Etiqueta NFC</string>
+
+    <!-- Bloque de Identidad (Hints) -->
+    <string name="hint_serial_number">Número de Serie</string>
+    <string name="hint_firmware_version">Versión de Firmware</string>
+    <string name="hint_last_config_date">Última Configuración</string>
+
+    <!-- Bloque de Proceso (Hints) -->
+    <string name="hint_volume_m3">Volumen [m3]</string>
+    <string name="hint_flow_l_h">Caudal [L/h]</string>
+    <string name="hint_temperature_c">Temperatura [°C]</string>
+    <string name="hint_battery_percent">Bateria [%]</string>
+    <string name="hint_status">Estado</string>
+
+    <!-- Bloque de Configuración (Hints) -->
+    <string name="hint_direct_flow_period">Periodo Caudal Directo [min]</string>
+    <string name="hint_reverse_flow_period">Periodo Caudal Inverso [min]</string>
+    <string name="hint_no_flow_period">Periodo Sin Caudal [min]</string>
+    <string name="hint_leakage_period">Periodo con fuga [min]</string>
+
+    <!-- Bloque de Ingeniería (Hints) -->
+    <string name="hint_volume_l">Volumen [L]</string>
+    <string name="hint_volume_l_uncal">Volumen sin Calibrar [L]</string>
+    <string name="hint_temperature_c_uncal">Temperatura sin Calibrar [°C]</string>
+    <string name="hint_flow_l_h_uncal">Caudal sin Calibrar [L/h]</string>
+    <string name="hint_ttof">TToF</string>
+    <string name="hint_dtof">DToF</string>
+    <string name="hint_std_dev">StdDev</string>
+    <string name="hint_time_sec">Time [sec]</string>
+    <string name="hint_chip_temperature">Chip Temperature</string>
+    <string name="hint_lux">Lux</string>
+    <string name="hint_nfc_message">NFC Message</string>
+
+    <!-- Botones de Solicitud (Texto del botón) -->
+    <string name="button_update_identity">Identidad</string>
+    <string name="button_update_process">Proceso</string>
+    <string name="button_update_config">Configuracion</string>
+    <string name="button_update_engineering">Ingenieria</string>
 </resources>

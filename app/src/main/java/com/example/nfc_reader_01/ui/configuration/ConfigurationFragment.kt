@@ -1,35 +1,39 @@
 package com.example.nfc_reader_01.ui.configuration
 
+import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.example.nfc_reader_01.NfcInteractionListener
 import com.example.nfc_reader_01.SharedNfcViewModel
+import com.example.nfc_reader_01.data.ConfigurationData
+import com.example.nfc_reader_01.data.NfcDataParser
 import com.example.nfc_reader_01.databinding.FragmentConfigurationBinding
+import com.example.nfc_reader_01.utils.LogManager
+import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class ConfigurationFragment : Fragment() {
 
-    // Comandos de ejemplo para NFC
-    private companion object {
-        // Renombrado para claridad (el comando real será 0x05)
-        const val COMMAND_READ_CONFIG = 0x04.toByte()
-        const val COMMAND_WRITE_CONFIG = 0x05.toByte()
-        const val COMMAND_FACTORY_RESET = 0x0A.toByte() // Comando genérico para reset
-        const val FLOAT_COUNT = 11 // K_meter (1) + Temp Cal (4) + FC Errors (6)
-        const val CONFIG_BYTE_SIZE = FLOAT_COUNT * 4 // 11 floats * 4 bytes/float = 44 bytes
+    // Comandos
+    companion object {
+        const val COMMAND_READ_CONFIG = 0x03.toByte()
+        const val COMMAND_WRITE_CONFIG = 0x04.toByte()
+        const val COMMAND_FACTORY_RESET = 0x0A.toByte()
+        // Este es el tamaño ÚTIL de los datos de configuración (96 bytes)
+        const val CONFIG_BYTE_SIZE = 96
+        const val FLOAT_FORMAT = "%.4f"
     }
 
     private val sharedNfcViewModel: SharedNfcViewModel by activityViewModels()
@@ -37,12 +41,36 @@ class ConfigurationFragment : Fragment() {
     private var _binding: FragmentConfigurationBinding? = null
     private val binding get() = _binding!!
 
+    // Almacena la última configuración leída para poder modificarla y guardarla (CRÍTICO)
+    private var currentConfigData: ConfigurationData? = null
+
+    // Referencia al listener de la actividad (MainActivity)
+    private var listener: NfcInteractionListener? = null
+
+    // --- Ciclo de vida para el Listener ---
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        if (context is NfcInteractionListener) {
+            listener = context
+        } else {
+            // Se usa Log.wtf para errores críticos de configuración de la Activity
+            Log.wtf("ConfigFragment", "${context.toString()} debe implementar NfcInteractionListener")
+        }
+    }
+
+    override fun onDetach() {
+        super.onDetach()
+        listener = null
+    }
+
+    // --- Vistas y Lógica ---
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        // Asumiendo que tu archivo XML es ahora fragment_configuration.xml
         _binding = FragmentConfigurationBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -50,8 +78,7 @@ class ConfigurationFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Inicializa la fecha de última configuración con un valor por defecto
-        binding.textViewLastConfigurationDate.setText("No configurado")
+        binding.textViewLastConfigurationDate.setText("Sin datos de lectura")
 
         setupListeners()
         observeViewModel()
@@ -63,169 +90,211 @@ class ConfigurationFragment : Fragment() {
     private fun setupListeners() {
         // --- 1. GUARDAR CONFIGURACIÓN (Escribir en TAG) ---
         binding.saveConfigButton.setOnClickListener {
-
-            // 1. Obtener el ByteArray, que es nullable (ByteArray?).
-            val configBytesNullable = serializeConfigDataToBytes()
-
-            // 2. Usar un 'if' explícito para la validación y el control de flujo.
-            if (configBytesNullable == null || configBytesNullable.size != CONFIG_BYTE_SIZE) {
+            // CRÍTICO: Debemos tener la configuración base leída para no sobrescribir los campos no mostrados.
+            val baseConfig = currentConfigData
+            if (baseConfig == null) {
+                // Mensaje mejorado: Acción requerida
                 Toast.makeText(
                     requireContext(),
-                    "Error: Asegúrese de que todos los ${FLOAT_COUNT} campos numéricos son válidos (requerido: $CONFIG_BYTE_SIZE bytes).",
+                    "ERROR: Debe LEER la configuración actual (0x03) antes de intentar GUARDAR.",
                     Toast.LENGTH_LONG
                 ).show()
-                // Salir de la lambda del click listener
                 return@setOnClickListener
             }
 
-            // 3. Smart-cast explícito: Asignamos a una variable no nula después de la validación.
-            val configBytes: ByteArray = configBytesNullable
+            // 1. Leer los 11 campos del UI y actualizar el objeto ConfigurationData.
+            val newConfigData = updateConfigDataFromUI(baseConfig)
+            if (newConfigData == null) {
+                // El error de validación de campos ya se muestra en el campo de texto respectivo
+                Toast.makeText(requireContext(), "Revise los campos con errores de formato (deben ser números válidos).", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
 
-            // 4. Establecer los datos y ENVIAR el comando de escritura
-            sharedNfcViewModel.setConfigData(configBytes) // Pasa el valor no nulo validado
-            // CORRECCIÓN CLAVE: Usar sendCommand en lugar de setCommandToSend
-            sharedNfcViewModel.sendCommand(COMMAND_WRITE_CONFIG)
+            // 2. Serializar el objeto completo de 96 bytes (incluyendo campos no mostrados y timestamp actualizado).
+            val configBytes = NfcDataParser.serializeConfigData(newConfigData)
 
-            // Actualizar la fecha y mostrar mensaje
+            if (configBytes.size != CONFIG_BYTE_SIZE) {
+                Log.e("ConfigFragment", "Error de serialización: Tamaño esperado $CONFIG_BYTE_SIZE, obtenido ${configBytes.size}")
+                // Mensaje mejorado: Error interno de protocolo
+                Toast.makeText(requireContext(), "Error interno: Falló la serialización del paquete de escritura.", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+
+            // 3. Establecer los datos que se escribirán en el próximo escaneo
+            sharedNfcViewModel.setConfigDataToWrite(configBytes)
+
+            // 4. Solicitar a la Activity que ejecute el comando de escritura
+            listener?.requestWriteConfig() ?: run {
+                Toast.makeText(requireContext(), "Error: La actividad no está lista para NFC.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // 5. Actualizar la fecha visualmente como "Pendiente de Guardar"
             val timestamp = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault()).format(Date())
-            binding.textViewLastConfigurationDate.setText(timestamp)
+            binding.textViewLastConfigurationDate.setText("PENDIENTE DE GUARDAR ($timestamp)")
 
-            Toast.makeText(
-                requireContext(),
-                "Comando ${COMMAND_WRITE_CONFIG.toHexString()} (Escribir) y $CONFIG_BYTE_SIZE bytes listos. ¡Ahora escanee el TAG!",
-                Toast.LENGTH_LONG
-            ).show()
+            // Mensaje mejorado: Instrucción clara para el usuario
+            // Toast.makeText(
+            //    requireContext(),
+            //    "Comando de ESCRITURA (0x${COMMAND_WRITE_CONFIG.toHexString()}) listo. ¡ACERQUE EL TAG AHORA para aplicar los cambios!",
+            //    Toast.LENGTH_LONG
+            //).show()
         }
 
         // --- 2. LEER CONFIGURACIÓN (Leer del TAG) ---
         binding.readConfigButton.setOnClickListener {
-            // Este es el punto que requiere que setConfigData acepte ByteArray?
-            sharedNfcViewModel.setConfigData(null) // Limpiar datos de escritura previos
-            // CORRECCIÓN CLAVE: Usar sendCommand en lugar de setCommandToSend
-            sharedNfcViewModel.sendCommand(COMMAND_READ_CONFIG)
+            // 1. Limpiar datos de escritura previos y solicitar el comando de lectura
+            sharedNfcViewModel.setConfigDataToWrite(null)
+            listener?.requestNextCommand(COMMAND_READ_CONFIG) ?: run {
+                Toast.makeText(requireContext(), "Error: La actividad no está lista para NFC.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
-            Toast.makeText(
-                requireContext(),
-                "Comando ${COMMAND_READ_CONFIG.toHexString()} (Leer) listo. ¡Ahora escanee el TAG!",
-                Toast.LENGTH_LONG
-            ).show()
+            // Mensaje mejorado: Instrucción clara para el usuario
+            // Toast.makeText(
+            //    requireContext(),
+            //    "Comando de LECTURA (0x${COMMAND_READ_CONFIG.toHexString()}) listo. ¡ACERQUE EL TAG para cargar la configuración!",
+            //    Toast.LENGTH_LONG
+            //).show()
         }
 
         // --- 3. RESTABLECER CONFIGURACIÓN DE FÁBRICA ---
         binding.factoryResetButton.setOnClickListener {
-            sharedNfcViewModel.setConfigData(null) // No se envían datos
-            // CORRECCIÓN CLAVE: Usar sendCommand en lugar de setCommandToSend
-            sharedNfcViewModel.sendCommand(COMMAND_FACTORY_RESET)
+            // 1. Limpiar datos de escritura (por si acaso) y solicitar el comando de reset
+            sharedNfcViewModel.setConfigDataToWrite(null)
+            listener?.requestNextCommand(COMMAND_FACTORY_RESET) ?: run {
+                Toast.makeText(requireContext(), "Error: La actividad no está lista para NFC.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
-            Toast.makeText(
-                requireContext(),
-                "Comando ${COMMAND_FACTORY_RESET.toHexString()} (Reset de Fábrica) listo. ¡Ahora escanee el TAG!",
-                Toast.LENGTH_LONG
-            ).show()
+            // Mensaje mejorado: Advertencia y acción requerida
+            // Toast.makeText(
+            //    requireContext(),
+            //    "Comando de RESET (0x${COMMAND_FACTORY_RESET.toHexString()}) listo. ¡ACERQUE EL TAG para RESTABLECER DE FÁBRICA!",
+            //    Toast.LENGTH_LONG
+            //).show()
         }
     }
 
+
     /**
-     * Serializa los 11 campos de texto flotantes del UI a un único ByteArray de 44 bytes.
-     * @return ByteArray con la configuración o null si hay un error de formato.
+     * Lee los 11 campos de texto flotantes del UI y crea un nuevo ConfigurationData
+     * a partir de la base, actualizando solo los campos visibles.
+     * @param baseConfig El ConfigurationData leído previamente del TAG.
+     * @return El nuevo ConfigurationData con los campos actualizados, o null si hay un error de formato.
      */
-    private fun serializeConfigDataToBytes(): ByteArray? {
-        // 1. Lista ordenada de todos los EditTexts que contienen valores flotantes
-        val inputFields = listOf(
-            binding.editTextKMeter,
-            binding.editTextTempRawLow, binding.editTextTempRawHigh,
-            binding.editTextTempCalLow, binding.editTextTempCalHigh,
-            binding.editTextFcqQ1Error, binding.editTextFcqQ2Error,
-            binding.editTextFcq035Error, binding.editTextFcq100Error,
-            binding.editTextFcq10LmError, binding.editTextFcqQ3Error
+    private fun updateConfigDataFromUI(baseConfig: ConfigurationData): ConfigurationData? {
+        var updatedConfig = baseConfig
+        var allValid = true
+
+        // Tu lista de Triples está correcta, solo hay que usarla de forma limpia.
+        val uiUpdates: List<Triple<TextInputEditText, Float, (Float) -> Unit>> = listOf(
+            Triple(binding.editTextKMeter, baseConfig.kMeter) { v -> updatedConfig = updatedConfig.copy(kMeter = v) },
+            Triple(binding.editTextTempRawLow, baseConfig.lowTempUnscaled) { v -> updatedConfig = updatedConfig.copy(lowTempUnscaled = v) },
+            Triple(binding.editTextTempRawHigh, baseConfig.highTempUnscaled) { v -> updatedConfig = updatedConfig.copy(highTempUnscaled = v) },
+            Triple(binding.editTextTempCalLow, baseConfig.lowTempCorrected) { v -> updatedConfig = updatedConfig.copy(lowTempCorrected = v) },
+            Triple(binding.editTextTempCalHigh, baseConfig.highTempCorrected) { v -> updatedConfig = updatedConfig.copy(highTempCorrected = v) },
+            Triple(binding.editTextFcqQ1Error, baseConfig.fcQ1_error) { v -> updatedConfig = updatedConfig.copy(fcQ1_error = v) },
+            Triple(binding.editTextFcqQ2Error, baseConfig.fcQ2_error) { v -> updatedConfig = updatedConfig.copy(fcQ2_error = v) },
+            Triple(binding.editTextFcq035Error, baseConfig.fcQ0_35_error) { v -> updatedConfig = updatedConfig.copy(fcQ0_35_error = v) },
+            Triple(binding.editTextFcq100Error, baseConfig.fcQ1_00_error) { v -> updatedConfig = updatedConfig.copy(fcQ1_00_error = v) },
+            Triple(binding.editTextFcq10LmError, baseConfig.fcQ10_00_error) { v -> updatedConfig = updatedConfig.copy(fcQ10_00_error = v) },
+            Triple(binding.editTextFcqQ3Error, baseConfig.fcQ3_error) { v -> updatedConfig = updatedConfig.copy(fcQ3_error = v) }
         )
 
-        val floats = mutableListOf<Float>()
-
-        // 2. Intentar parsear todos los campos
-        for (field in inputFields) {
-            val text = field.text.toString().trim()
+        for ((field, _, updateAction) in uiUpdates) {
+            val text = field.text?.toString()?.trim() ?: ""
+            // Si el campo está vacío, consideramos 0.0f por defecto si el TAG lo permite, o forzamos error.
+            // Para configuración, es mejor forzar el error si no es válido.
             val floatValue = text.toFloatOrNull()
             if (floatValue == null) {
-                // Marcar el campo con error si no es un número válido
-                field.error = "Valor inválido"
-                return null
+                field.error = "Debe ser un valor numérico válido"
+                allValid = false
+            } else {
+                field.error = null
+                updateAction(floatValue)
             }
-            // Limpiar error si la validación es exitosa para este campo.
-            field.error = null
-            floats.add(floatValue)
         }
 
-        // 3. Serializar los floats a bytes usando ByteBuffer
-        val buffer = ByteBuffer.allocate(CONFIG_BYTE_SIZE)
-        buffer.order(ByteOrder.BIG_ENDIAN) // Asumimos Big Endian. Cambiar a LITTLE_ENDIAN si es necesario
+        return if (allValid) updatedConfig else null
+    }
 
-        floats.forEach { buffer.putFloat(it) }
+    /**
+     * Muestra el ConfigurationData completo en los 11 campos disponibles del UI.
+     * @param config El ConfigurationData ya parseado del TAG.
+     */
+    private fun displayConfigData(config: ConfigurationData) {
 
-        return buffer.array()
+        // 1. Rellenar campos del UI
+        binding.editTextKMeter.setText(String.format(Locale.getDefault(), FLOAT_FORMAT, config.kMeter))
+        binding.editTextTempRawLow.setText(String.format(Locale.getDefault(), FLOAT_FORMAT, config.lowTempUnscaled))
+        binding.editTextTempRawHigh.setText(String.format(Locale.getDefault(), FLOAT_FORMAT, config.highTempUnscaled))
+        binding.editTextTempCalLow.setText(String.format(Locale.getDefault(), FLOAT_FORMAT, config.lowTempCorrected))
+        binding.editTextTempCalHigh.setText(String.format(Locale.getDefault(), FLOAT_FORMAT, config.highTempCorrected))
+        binding.editTextFcqQ1Error.setText(String.format(Locale.getDefault(), FLOAT_FORMAT, config.fcQ1_error))
+        binding.editTextFcqQ2Error.setText(String.format(Locale.getDefault(), FLOAT_FORMAT, config.fcQ2_error))
+        binding.editTextFcq035Error.setText(String.format(Locale.getDefault(), FLOAT_FORMAT, config.fcQ0_35_error))
+        binding.editTextFcq100Error.setText(String.format(Locale.getDefault(), FLOAT_FORMAT, config.fcQ1_00_error))
+        binding.editTextFcq10LmError.setText(String.format(Locale.getDefault(), FLOAT_FORMAT, config.fcQ10_00_error))
+        binding.editTextFcqQ3Error.setText(String.format(Locale.getDefault(), FLOAT_FORMAT, config.fcQ3_error))
+
+        // 2. Mostrar fecha de configuración
+        val dateMillis = config.lastConfigurationDate.toLong() * 1000
+        val date = Date(dateMillis)
+        val dateFormatter = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
+        val formattedDate = dateFormatter.format(date)
+        binding.textViewLastConfigurationDate.setText(formattedDate)
     }
 
 
-    /**
-     * Deserializa los datos de configuración recibidos del TAG y los vuelca al UI.
-     * @param bytes El ByteArray recibido del TAG.
-     */
-    private fun deserializeConfigDataFromBytes(bytes: ByteArray) {
-        if (bytes.size != CONFIG_BYTE_SIZE) {
-            Toast.makeText(requireContext(), "Error: Tamaño de datos recibido incorrecto (${bytes.size} bytes).", Toast.LENGTH_LONG).show()
-            return
-        }
-
-        val buffer = ByteBuffer.wrap(bytes)
-        buffer.order(ByteOrder.BIG_ENDIAN) // Debe coincidir con el orden de escritura
-
-        val inputFields = listOf(
-            binding.editTextKMeter,
-            binding.editTextTempRawLow, binding.editTextTempRawHigh,
-            binding.editTextTempCalLow, binding.editTextTempCalHigh,
-            binding.editTextFcqQ1Error, binding.editTextFcqQ2Error,
-            binding.editTextFcq035Error, binding.editTextFcq100Error,
-            binding.editTextFcq10LmError, binding.editTextFcqQ3Error
-        )
-
-        // Deserializar y actualizar los campos
-        for (field in inputFields) {
-            // Lee un float y lo convierte a String con 4 decimales
-            val floatValue = try {
-                buffer.getFloat()
-            } catch (e: Exception) {
-                // Manejar error de lectura si el buffer se queda sin datos
-                Toast.makeText(requireContext(), "Error al deserializar datos: ${e.message}", Toast.LENGTH_LONG).show()
-                return
-            }
-            field.setText(String.format(Locale.getDefault(), "%.4f", floatValue))
-        }
-
-        // Opcional: Actualizar la fecha de última lectura
-        binding.textViewLastConfigurationDate.setText("Leído del TAG (${bytes.size} bytes)")
-    }
-
-
-    /**
-     * Observa el estado del configData en el ViewModel.
-     * Este Flow se actualiza cuando una lectura NFC exitosa devuelve un ByteArray.
-     */
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                sharedNfcViewModel.configData.collect { bytes ->
-                    if (bytes != null && bytes.size == CONFIG_BYTE_SIZE) {
-                        // Si se reciben bytes, se asume que es una respuesta de lectura exitosa
-                        deserializeConfigDataFromBytes(bytes)
-                        Toast.makeText(requireContext(), "Configuración leída y cargada exitosamente.", Toast.LENGTH_SHORT).show()
+                sharedNfcViewModel.configurationResponseData.collect { bytes ->
+                    if (bytes != null) {
+                        // CRITERIO DE AJUSTE POR PADDING: El buffer recibido (e.g., 127 bytes)
+                        // debe ser AL MENOS del tamaño de los datos útiles (96 bytes).
+                        if (bytes.size >= CONFIG_BYTE_SIZE) {
+
+                            // Extraemos SOLO los primeros 96 bytes que son los datos de configuración.
+                            val usefulBytes = bytes.sliceArray(0 until CONFIG_BYTE_SIZE)
+
+                            if (bytes.size != CONFIG_BYTE_SIZE) {
+                                Log.i("ConfigFragment", "Buffer recibido con padding (${bytes.size} bytes). Procesando los primeros $CONFIG_BYTE_SIZE bytes.")
+                            }
+
+                            try {
+                                // 1. Parsear los 96 bytes completos
+                                val config = NfcDataParser.parseConfigData(usefulBytes)
+                                // 2. Almacenar el objeto completo para futuras escrituras
+                                currentConfigData = config
+                                // 3. Mostrar solo los campos relevantes en la UI
+                                displayConfigData(config)
+                                // Mensaje mejorado: Éxito de la lectura
+                                // Toast.makeText(requireContext(), "Configuración (0x83) LEÍDA y cargada en pantalla.", Toast.LENGTH_SHORT).show()
+                            } catch (e: Exception) {
+                                Log.e("ConfigFragment", "Error al parsear datos 0x83: ${e.message}")
+                                // Mensaje mejorado: Error de procesamiento
+                                Toast.makeText(requireContext(), "ERROR: Falló datos Configuración (0x83).", Toast.LENGTH_LONG).show()
+                            }
+                        } else {
+                            // Este caso ocurre si se reciben menos de 96 bytes (datos incompletos)
+                            // Mensaje mejorado: Error de tamaño
+                            Toast.makeText(
+                                requireContext(),
+                                "ERROR: Datos incompletos. Se recibieron ${bytes.size} bytes, se esperaban $CONFIG_BYTE_SIZE.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                        // Limpiar los datos después de consumirlos
+                        sharedNfcViewModel.clearConfigurationResponseData()
                     }
-                    // Si bytes es null, no se hace nada (puede ser al inicio o después de un comando de escritura)
                 }
             }
         }
     }
 
-    // Helper para convertir Byte a String hexadecimal (para los Toast de comandos)
+
     private fun Byte.toHexString() = String.format("%02X", this)
 
     override fun onDestroyView() {

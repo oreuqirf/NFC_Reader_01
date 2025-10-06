@@ -421,7 +421,7 @@
                 </LinearLayout>
             </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <!-- Last Configuration Date (Timestamp) - CORREGIDO: ahora es de solo lectura y simplificado -->
+            <!-- Last Configuration Date (Timestamp) - Read Only -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/text_input_layout_last_configuration"
                 android:layout_width="match_parent"

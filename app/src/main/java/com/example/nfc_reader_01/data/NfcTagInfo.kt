@@ -1,6 +1,9 @@
 package com.example.nfc_reader_01.data
 
 import android.nfc.NdefMessage
+import com.example.nfc_reader_01.toHexString
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 /**
  * Clase de datos que encapsula toda la información relevante de un TAG NFC detectado.
@@ -15,3 +18,4 @@ data class NfcTagInfo(
     val techType: String,
     val ndefMessage: NdefMessage? = null
 )
+

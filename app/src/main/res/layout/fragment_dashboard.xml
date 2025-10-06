@@ -26,7 +26,7 @@
                 android:id="@+id/titleTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Datos de la Etiqueta NFC"
+                android:text="@string/title_nfc_data"
                 android:textSize="24sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="24dp"/>
@@ -36,7 +36,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Número de Serie">
+                android:hint="@string/hint_serial_number">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_serial_number"
                     android:layout_width="match_parent"
@@ -48,7 +48,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Versión de Firmware">
+                android:hint="@string/hint_firmware_version">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_firmware_version"
                     android:layout_width="match_parent"
@@ -60,7 +60,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Última Configuración">
+                android:hint="@string/hint_last_config_date">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_last_config_date"
                     android:layout_width="match_parent"
@@ -80,7 +80,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Volumen [m3]">
+                android:hint="@string/hint_volume_m3">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_volume"
                     android:layout_width="match_parent"
@@ -92,7 +92,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Caudal [L/h]">
+                android:hint="@string/hint_flow_l_h">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_flow"
                     android:layout_width="match_parent"
@@ -104,7 +104,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Temperatura [°C]">
+                android:hint="@string/hint_temperature_c">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_temperature"
                     android:layout_width="match_parent"
@@ -116,7 +116,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Bateria [%]">
+                android:hint="@string/hint_battery_percent">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_battery"
                     android:layout_width="match_parent"
@@ -128,7 +128,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Estado">
+                android:hint="@string/hint_status">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_status"
                     android:layout_width="match_parent"
@@ -148,7 +148,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Periodo Caudal Directo [min]">
+                android:hint="@string/hint_direct_flow_period">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_direct_flow_period"
                     android:layout_width="match_parent"
@@ -160,7 +160,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Periodo Caudal Inverso [min]">
+                android:hint="@string/hint_reverse_flow_period">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_reverse_flow_period"
                     android:layout_width="match_parent"
@@ -172,7 +172,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Periodo Sin Caudal [min]">
+                android:hint="@string/hint_no_flow_period">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_no_flow_period"
                     android:layout_width="match_parent"
@@ -184,7 +184,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Periodo con fuga [min]">
+                android:hint="@string/hint_leakage_period">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_leakage_period"
                     android:layout_width="match_parent"
@@ -204,7 +204,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Volumen [L]">
+                android:hint="@string/hint_volume_l">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_volume_liters"
                     android:layout_width="match_parent"
@@ -216,7 +216,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Volumen sin Calibrar [L]">
+                android:hint="@string/hint_volume_l_uncal">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_volume_liters_uncal"
                     android:layout_width="match_parent"
@@ -228,7 +228,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Temperatura sin Calibrar [°C]">
+                android:hint="@string/hint_temperature_c_uncal">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_temperature_uncal"
                     android:layout_width="match_parent"
@@ -240,7 +240,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Caudal sin Calibrar [L/h]">
+                android:hint="@string/hint_flow_l_h_uncal">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_flow_uncal"
                     android:layout_width="match_parent"
@@ -252,7 +252,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="TToF">
+                android:hint="@string/hint_ttof">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_ttof"
                     android:layout_width="match_parent"
@@ -264,7 +264,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="DToF">
+                android:hint="@string/hint_dtof">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_dtof"
                     android:layout_width="match_parent"
@@ -276,7 +276,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="StdDev">
+                android:hint="@string/hint_std_dev">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_std_dev"
                     android:layout_width="match_parent"
@@ -288,7 +288,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Time [sec]">
+                android:hint="@string/hint_time_sec">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_time"
                     android:layout_width="match_parent"
@@ -300,7 +300,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Chip Temperature">
+                android:hint="@string/hint_chip_temperature">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_chip_temperature"
                     android:layout_width="match_parent"
@@ -312,7 +312,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:hint="Lux">
+                android:hint="@string/hint_lux">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_lux"
                     android:layout_width="match_parent"
@@ -327,44 +327,54 @@
                 android:layout_marginBottom="16dp"
                 android:background="?android:attr/listDivider"/>
 
-            <!-- TextView para mensajes de estado/feedback (Corregido) -->
-            <TextView
-                android:id="@+id/text_message"
+            <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="16dp"
-                android:gravity="center"
-                android:text="Esperando conexión NFC..."
-                android:textColor="?attr/colorPrimary"
-                android:textSize="16sp"
-                android:textStyle="italic"
-                tools:text="Comando 0x01 enviado. Esperando respuesta..."/>
+                android:layout_marginBottom="8dp"
+                android:hint="@string/hint_nfc_message">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_message"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Botones de solicitud de datos -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:background="?android:attr/listDivider"/>
+
+
+            <!-- Botones de solicitud de datos (Ancho completo e internacionalizados) -->
             <Button
                 android:id="@+id/requestIdentityButton"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Actualizar Identidad" />
+                android:layout_marginBottom="8dp"
+                android:text="@string/button_update_identity" />
 
             <Button
                 android:id="@+id/requestProcessButton"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Actualizar Proceso" />
+                android:layout_marginBottom="8dp"
+                android:text="@string/button_update_process" />
 
             <Button
                 android:id="@+id/requestConfigButton"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Actualizar Configuracion" />
+                android:layout_marginBottom="8dp"
+                android:text="@string/button_update_config" />
 
             <Button
                 android:id="@+id/requestEngineeringButton"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Actualizar Ingenieria" />
+                android:layout_marginBottom="8dp"
+                android:text="@string/button_update_engineering" />
 
         </LinearLayout>
     </ScrollView>
