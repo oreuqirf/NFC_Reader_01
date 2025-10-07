@@ -41,6 +41,7 @@
     <string name="hint_time_sec">Time [sec]</string>
     <string name="hint_chip_temperature">Chip Temperature</string>
     <string name="hint_lux">Lux</string>
+    <string name="hint_rak_frame_counter">Contador tramas RAK</string>
     <string name="hint_nfc_message">NFC Message</string>
 
     <!-- Botones de Solicitud (Texto del botón) -->

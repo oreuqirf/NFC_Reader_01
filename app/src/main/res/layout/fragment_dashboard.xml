@@ -320,6 +320,18 @@
                     android:focusable="false"/>
             </com.google.android.material.textfield.TextInputLayout>
 
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="@string/hint_rak_frame_counter">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_rak_frame_counter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"

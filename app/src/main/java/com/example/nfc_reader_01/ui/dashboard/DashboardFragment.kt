@@ -41,10 +41,10 @@ class DashboardFragment : Fragment() {
 
     // --- TAMAÑOS ÚTILES ESPERADOS DEL PAYLOAD (asumiendo que el resto son bytes de relleno/padding) ---
     // El TAG envía 127 bytes, pero solo esta porción es la que contiene datos útiles.
-    private val IDENTITY_PAYLOAD_SIZE = 12 // Ejemplo: 16 bytes para ID, FW Version y Timestamp
-    private val PROCESS_PAYLOAD_SIZE = 36 // Ejemplo: 32 bytes para 8 campos de 4 bytes (Float/Int)
+    private val IDENTITY_PAYLOAD_SIZE = 12 // 12 bytes para ID, FW Version y Timestamp
+    private val PROCESS_PAYLOAD_SIZE = 36 // 36 bytes para 8 campos de 4 bytes (Float/Int)
     // CONFIG_BYTE_SIZE está importado (asumido 96 bytes)
-    private val ENGINEERING_PAYLOAD_SIZE = 40 // Ejemplo: 40 bytes para 10 campos de 4 bytes (Float/Int)
+    private val ENGINEERING_PAYLOAD_SIZE = 44 // 44 bytes para 11 campos de 4 bytes (Float/Int)
     // --------------------------------------------------------------------------------------------------
 
     override fun onCreateView(
@@ -364,7 +364,8 @@ class DashboardFragment : Fragment() {
             binding.editTextStdDev.setText(floatStdDev.format(4))
             binding.editTextTime.setText("${engineering.time} sec") // Este es un Int puro
             binding.editTextChipTemperature.setText("${floatChipTemp.format(1)} °C")
-            binding.editTextLux.setText(floatLux.format(0))
+            binding.editTextLux.setText("${floatLux.format(0)} mV")
+            binding.editTextRakFrameCounter.setText("${engineering.rakFrameCounter}") // Este es un Int puro
 
         } catch (e: IllegalArgumentException) {
             Log.e(TAG, "Error de tamaño de Payload (0x85): ${e.message}")
@@ -420,6 +421,7 @@ class DashboardFragment : Fragment() {
         binding.editTextTime.setText("")
         binding.editTextChipTemperature.setText("")
         binding.editTextLux.setText("")
+        binding.editTextRakFrameCounter.setText("")
         // Limpiamos los placeholders de configuración avanzada si existen
         // binding.editTextConfigKMeter.setText("")
         // binding.editTextConfigHighTempCorrected.setText("")

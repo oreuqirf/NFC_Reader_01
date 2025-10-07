@@ -103,6 +103,7 @@ data class EngineeringData(
     val time: Int,             // Tiempo
     val chipTemperature: Int,  // Temperatura interna
     val lux: Int,              // Luxs
+    val rakFrameCounter: Int,  // RAK Frame Counter
 )
 
 
@@ -257,9 +258,9 @@ object NfcDataParser {
      * Convierte el ByteArray de 40 bytes (respuesta 0x85) en un objeto EngineeringData estructurado.
      */
     fun parseEngineeringData(engineeringBytes: ByteArray): EngineeringData {
-        // El tamaño esperado es 40 bytes (10 Ints).
-        if (engineeringBytes.size != 40) {
-            throw IllegalArgumentException("El tamaño de datos de Ingenieria debe ser 40 bytes. Recibido: ${engineeringBytes.size}")
+        // El tamaño esperado es 44 bytes (11 Ints).
+        if (engineeringBytes.size != 44) {
+            throw IllegalArgumentException("El tamaño de datos de Ingenieria debe ser 44 bytes. Recibido: ${engineeringBytes.size}")
         }
 
         val buffer = ByteBuffer.wrap(engineeringBytes).order(ByteOrder.LITTLE_ENDIAN)
@@ -274,7 +275,8 @@ object NfcDataParser {
             stdDev = buffer.getInt(),
             time = buffer.getInt(),
             chipTemperature = buffer.getInt(),
-            lux = buffer.getInt()
+            lux = buffer.getInt(),
+            rakFrameCounter = buffer.getInt()
         )
     }
 
