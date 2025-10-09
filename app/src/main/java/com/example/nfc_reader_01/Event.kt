@@ -1,18 +1,23 @@
 package com.example.nfc_reader_01
 
-
-// Event.kt
-
 /**
- * Usado como wrapper para datos que solo deberían ser consumidos una vez.
+ * A wrapper for data that should only be consumed once.
+ * This is useful for events like navigation or showing a Snackbar, where you want to prevent the
+ * action from being repeated on configuration changes.
+ *
+ * @param T The type of the content.
+ * @property content The actual data being held by the event.
  */
 open class Event<out T>(private val content: T) {
 
     var hasBeenHandled = false
-        private set // Solo permite establecer este valor dentro de la clase
+        private set // Allow external read but not write
 
     /**
-     * Devuelve el contenido y marca el evento como manejado.
+     * Returns the content and prevents its use again.
+     * If the content has already been handled, it returns null.
+     *
+     * @return The content if it hasn't been handled, otherwise null.
      */
     fun getContentIfNotHandled(): T? {
         return if (hasBeenHandled) {
@@ -24,7 +29,10 @@ open class Event<out T>(private val content: T) {
     }
 
     /**
-     * Devuelve el contenido, incluso si ya ha sido manejado.
+     * Returns the content, even if it's already been handled.
+     * This is useful for peeking at the content without consuming the event.
+     *
+     * @return The content.
      */
     fun peekContent(): T = content
 }

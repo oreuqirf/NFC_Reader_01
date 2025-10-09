@@ -1,27 +1,27 @@
 package com.example.nfc_reader_01
 
 /**
- * Interfaz que permite a los Fragmentos solicitar acciones a la MainActivity.
- * La MainActivity debe implementar esta interfaz para manejar las interacciones NFC.
+ * Interface that allows Fragments to request actions from the MainActivity.
+ * The MainActivity must implement this interface to handle NFC interactions.
  */
 interface NfcInteractionListener {
     /**
-     * Solicita a la MainActivity que navegue al fragmento Dashboard.
-     * Utilizado después de un escaneo exitoso o una acción de importancia.
+     * Requests the MainActivity to navigate to the Dashboard fragment.
+     * Used after a successful scan or an important action.
      */
     fun navigateToDashboard()
 
     /**
-     * Solicita al ViewModel que establezca un nuevo comando para el próximo ciclo
-     * de lectura/escritura (ej. 0x02 para leer datos de proceso).
+     * Requests the ViewModel to set a new command for the next read/write cycle
+     * (e.g., 0x02 for reading process data).
      *
-     * @param commandId El byte del comando a solicitar.
+     * @param commandId The byte of the command to request.
      */
     fun requestNextCommand(commandId: Byte)
 
     /**
-     * Solicita al ViewModel que prepare y ejecute el mensaje de escritura de configuración (0x05)
-     * en el próximo escaneo del TAG.
+     * Requests the ViewModel to prepare and execute the configuration write message (0x05)
+     * in the next TAG scan.
      */
     fun requestWriteConfig()
 }

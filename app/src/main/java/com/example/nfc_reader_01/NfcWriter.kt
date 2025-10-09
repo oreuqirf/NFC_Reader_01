@@ -8,94 +8,86 @@ import java.io.IOException
 import java.lang.SecurityException
 
 /**
- * Clase de utilidad para manejar comandos de escritura en tags NFC.
+ * Utility class for handling write commands on NFC tags.
  *
- * NOTA: Esta implementación prioriza la escritura NDEF. La lógica de fallback
- * a NFCV (ISO 15693) se indica en los comentarios, pero requeriría una
- * implementación detallada de comandos ISO 15693 (como NfcV.get(tag))
- * para ser totalmente funcional. El enfoque aquí es la captura de errores
- * durante la fase crítica de conexión/escritura NDEF.
+ * NOTE: This implementation prioritizes NDEF writing. The fallback logic
+ * to NFCV (ISO 15693) is indicated in the comments but would require a
+ * detailed implementation of ISO 15693 commands (like NfcV.get(tag))
+ * to be fully functional. The focus here is on error handling
+ * during the critical NDEF connection/writing phase.
  */
 class NfcWriter {
 
     private val TAG = "NfcWriter"
 
     /**
-     * Intenta escribir un mensaje NDEF en el tag.
+     * Attempts to write an NDEF message to the tag.
      *
-     * @param tag El objeto Tag detectado.
-     * @param ndefMessage El mensaje NDEF a escribir.
-     * @return Una cadena de texto indicando el resultado de la operación (éxito o error).
+     * @param tag The detected Tag object.
+     * @param ndefMessage The NDEF message to write.
+     * @return A string indicating the result of the operation (success or error).
      */
     fun executeNdefWriteCommand(tag: Tag, ndefMessage: NdefMessage): String {
         val ndef = Ndef.get(tag)
 
-        // 1. Lógica principal: Intentar escritura NDEF
+        // 1. Main logic: Attempt NDEF write
         if (ndef != null) {
             try {
-                // Conexión al tag
+                // Connect to the tag
                 ndef.connect()
 
-                // Comprobar si el tag es escribible y tiene espacio
+                // Check if the tag is writable and has enough space
                 if (!ndef.isWritable) {
-                    return "Error: El tag no es escribible (NDEF)."
+                    return "Error: The tag is not writable (NDEF)."
                 }
                 if (ndef.maxSize < ndefMessage.toByteArray().size) {
-                    return "Error: El mensaje es demasiado grande para este tag (NDEF)."
+                    return "Error: The message is too large for this tag (NDEF)."
                 }
 
-                // Escribir el mensaje NDEF
+                // Write the NDEF message
                 ndef.writeNdefMessage(ndefMessage)
 
-                // Si la escritura es exitosa, se desconecta al final del bloque try/finally
-                Log.d(TAG, "Escritura NDEF exitosa.")
-                return "Escritura NDEF exitosa: ¡Datos guardados correctamente!"
+                // If the write is successful, it disconnects at the end of the try/finally block
+                Log.d(TAG, "NDEF write successful.")
+                return "NDEF write successful: Data saved correctly!"
 
             } catch (e: SecurityException) {
-                // Captura la excepción que ocurre si el permiso se pierde (tag movido)
-                Log.e(TAG, "SecurityException durante la escritura NDEF: ${e.message}")
-                return "Error al escribir: El tag se movió. Acerque el tag de nuevo para completar la operación."
+                // Catches the exception that occurs if the permission is lost (tag moved)
+                Log.e(TAG, "SecurityException during NDEF write: ${e.message}")
+                return "Error writing: The tag was moved. Bring the tag closer again to complete the operation."
 
             } catch (e: IOException) {
-                // Captura la excepción común cuando la conexión con el tag se pierde
-                Log.e(TAG, "IOException durante la escritura NDEF: ${e.message}")
-                return "Error al escribir: El tag se movió o la conexión falló. Acerque el tag de nuevo para completar la operación."
+                // Catches the common exception when the connection with the tag is lost
+                Log.e(TAG, "IOException during NDEF write: ${e.message}")
+                return "Error writing: The tag was moved or the connection failed. Bring the tag closer again to complete the operation."
 
             } catch (e: Exception) {
-                // Otras excepciones inesperadas
-                Log.e(TAG, "Error inesperado durante la escritura NDEF: ${e.message}")
-                return "Error inesperado durante la escritura NDEF: ${e.message}"
+                // Other unexpected exceptions
+                Log.e(TAG, "Unexpected error during NDEF write: ${e.message}")
+                return "Unexpected error during NDEF write: ${e.message}"
 
             } finally {
-                // Asegurar que la conexión se cierre
+                // Ensure the connection is closed
                 try {
                     if (ndef.isConnected) {
                         ndef.close()
                     }
                 } catch (e: IOException) {
-                    Log.e(TAG, "Error al cerrar la conexión NDEF: ${e.message}")
+                    Log.e(TAG, "Error closing NDEF connection: ${e.message}")
                 }
             }
         }
 
-        // 2. Lógica de Fallback: Si no es un tag NDEF, intentar NFCV (ISO 15693)
-        // Aquí iría la lógica de fallback a NFCV para la escritura.
+        // 2. Fallback Logic: If it's not an NDEF tag, try NFCV (ISO 15693)
+        // The fallback logic to NFCV for writing would go here.
         // if (tag.techList.contains(NfcV::class.java.name)) {
         //     val nfcv = NfcV.get(tag)
-        //     // ... Implementación de escritura por comandos V.
-        //     return "Intento de escritura NFCV completado (Resultado a verificar)..."
+        //     // ... Implementation of writing via V commands.
+        //     return "Attempting NFCV write (Result to be verified)..."
         // }
 
 
-        // Si ni NDEF ni el fallback funcionaron
-        return "Error: No se encontró tecnología compatible (NDEF o NFCV) para la escritura."
+        // If neither NDEF nor the fallback worked
+        return "Error: No compatible technology (NDEF or NFCV) found for writing."
     }
 }
-
-// Ejemplo de uso (simulado, necesitaría el contexto de una Activity para ser real):
-// val message = NdefMessage(arrayOf(
-//     NdefRecord.createTextRecord("es", "Hola Mundo")
-// ))
-// val writer = NfcWriter()
-// val result = writer.executeNdefWriteCommand(detectedTag, message)
-// showToast(result) // Muestra el mensaje de éxito o error al usuario.

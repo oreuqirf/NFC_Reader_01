@@ -5,25 +5,26 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Objeto que contiene funciones de utilidad para dar formato a las fechas.
+ * Utility object for formatting dates.
  */
-object DateFormater {
+object DateFormatter {
     /**
-     * Convierte un timestamp Epoch (segundos) a una cadena de fecha y hora formateada.
-     * @param timestamp El valor Epoch en segundos (Long).
-     * @return La fecha formateada (String) o "Nunca configurado" si es 0.
+     * Converts an Epoch timestamp (in seconds) to a formatted date and time string.
+     *
+     * @param timestamp The Epoch value in seconds (Long).
+     * @return The formatted date (String) or "Never configured" if the timestamp is 0.
      */
     fun formatEpochTimestamp(timestamp: Long): String {
-        // El valor 0 se usa para indicar que nunca ha sido configurado
+        // The value 0 is used to indicate that it has never been configured
         if (timestamp == 0L) {
-            return "Nunca configurado"
+            return "Never configured"
         }
 
-        // Asumiendo que el timestamp es en SEGUNDOS (común en protocolos embebidos)
+        // Assuming the timestamp is in SECONDS (common in embedded protocols)
         val milliseconds = timestamp * 1000L
 
-        // Formato: día/mes/año hora:minuto:segundo
-        // Usamos Locale.getDefault() para respetar la configuración regional del usuario
+        // Format: year/month/day hour:minute:second
+        // We use Locale.getDefault() to respect the user's regional settings
         val sdf = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault())
         val date = Date(milliseconds)
         return sdf.format(date)

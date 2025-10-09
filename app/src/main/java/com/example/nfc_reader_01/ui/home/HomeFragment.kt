@@ -18,24 +18,28 @@ import com.example.nfc_reader_01.SharedNfcViewModel
 import com.example.nfc_reader_01.databinding.FragmentHomeBinding
 import kotlinx.coroutines.launch
 
+/**
+ * A [Fragment] that displays the main screen of the application.
+ * It shows the current NFC status and navigates to the dashboard when a tag is detected.
+ */
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
 
-    // Usar by activityViewModels() para inyectar y obtener la instancia compartida
+    // Use by activityViewModels() to inject and get the shared instance
     private val sharedNfcViewModel: SharedNfcViewModel by activityViewModels()
 
-    private var listener: NfcInteractionListener? = null // Referencia a la Activity (Listener)
+    private var listener: NfcInteractionListener? = null // Reference to the Activity (Listener)
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        // 1. Asegurarse de que la Activity implemente la interfaz
+        // 1. Make sure the Activity implements the interface
         if (context is NfcInteractionListener) {
             listener = context
         } else {
-            // Se usa Log.wtf para errores críticos de configuración
-            Log.wtf("HomeFragment", "$context debe implementar NfcInteractionListener")
+            // Log.wtf is used for critical configuration errors
+            Log.wtf("HomeFragment", "$context must implement NfcInteractionListener")
         }
     }
 
@@ -56,51 +60,49 @@ class HomeFragment : Fragment() {
 
     override fun onDetach() {
         super.onDetach()
-        listener = null // Limpiar la referencia para evitar pérdidas de memoria
+        listener = null // Clear the reference to avoid memory leaks
     }
 
+    /**
+     * Sets up the observers for the [SharedNfcViewModel].
+     */
     private fun setupObservers() {
-        // --- Observa nfcTagInfo (usando collect) ---
+        // --- Observes nfcTagInfo (using collect) ---
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 sharedNfcViewModel.nfcTagInfo.collect { tagInfo ->
                     if (tagInfo != null) {
-                        // 1. Notificar a la Activity para navegar
+                        // 1. Notify the Activity to navigate
                         listener?.navigateToDashboard()
 
-                        // 2. Actualizar la UI
+                        // 2. Update the UI
                         binding.statusIcon.setImageResource(R.drawable.ic_nfc_connected_24)
-                        binding.statusMessage.text = "¡TAG detectado! Navegando a la información..."
+                        binding.statusMessage.text = "TAG detected! Navigating to information..."
 
-                        // 3. Mostrar un Toast claro (FIX: Usamos un String explícito en lugar de 'it' que era el objeto tagInfo)
+                        // 3. Show a clear Toast
                         Toast.makeText(
                             context,
-                            "¡Etiqueta NFC conectada! Analizando datos.",
+                            "NFC tag connected! Analyzing data.",
                             Toast.LENGTH_SHORT
                         ).show()
 
                     } else {
-                        // Esto se ejecuta al inicio o si el ViewModel resetea el estado
+                        // This runs at the beginning or if the ViewModel resets the state
                         binding.statusIcon.setImageResource(R.drawable.ic_nfc_scan_24)
-                        binding.statusMessage.text = "Aproxime una etiqueta NFC para empezar a leer."
-
-                        // NOTA: Eliminamos el Toast aquí ya que el mensaje de la UI es suficiente
+                        binding.statusMessage.text = "Approach an NFC tag to start reading."
                     }
                 }
             }
         }
 
-        // Observa writeStatus (SharedFlow).
+        // Observes writeStatus (SharedFlow).
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                // 'status' es un String (no nullable)
+                // 'status' is a String (non-nullable)
                 sharedNfcViewModel.writeStatus.collect { status ->
-                    // El ViewModel asegura que 'status' es un mensaje de usuario amigable.
-                    // Usamos un Toast más largo para asegurar que se lea la información de estado de escritura.
+                    // The ViewModel ensures that 'status' is a user-friendly message.
+                    // We use a longer Toast to ensure the write status information is read.
                     Toast.makeText(context, status, Toast.LENGTH_LONG).show()
-
-                    // Eliminamos: sharedNfcViewModel.setWriteStatus(null)
-                    // Ya no es necesario porque SharedFlow emite el evento solo una vez.
                 }
             }
         }

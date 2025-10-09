@@ -8,46 +8,45 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Singleton centralizado para la gestión de logs de protocolo y eventos de la aplicación.
+ * Centralized singleton for managing protocol logs and application events.
  *
- * Utiliza Kotlin SharedFlow para emitir el historial de logs completo a todos los suscriptores
- * (como NotificationsFragment) de forma reactiva y thread-safe.
+ * It uses Kotlin SharedFlow to emit the complete log history to all subscribers
+ * (like NotificationsFragment) in a reactive and thread-safe way.
  */
 object LogManager {
 
-    // Variable privada para almacenar y mutar el historial de logs (String gigante)
+    // Private variable to store and mutate the log history (giant String)
     private var _logHistory: String = ""
 
-    // MutableSharedFlow que emite el historial de logs. Se utiliza replay = 1 para que
-    // los nuevos colectores reciban inmediatamente el estado actual del log.
+    // MutableSharedFlow that emits the log history. replay = 1 is used so that
+    // new collectors immediately receive the current state of the log.
     private val _protocolLog = MutableSharedFlow<String>(replay = 1)
 
-    // Exposición del SharedFlow como un flujo inmutable para que solo el LogManager
-    // pueda emitir nuevos valores.
+    // Exposure of the SharedFlow as an immutable flow so that only LogManager
+    // can emit new values.
     val protocolLog: SharedFlow<String> = _protocolLog.asSharedFlow()
 
     private val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
     /**
-     * Agrega un nuevo mensaje de log al historial y lo emite a todos los colectores activos.
-     * @param message El mensaje de log a añadir.
+     * Adds a new log message to the history and emits it to all active collectors.
+     * @param message The log message to add.
      */
     suspend fun log(message: String) {
-        // 1. Crear el nuevo mensaje formateado con timestamp
+        // 1. Create the new formatted message with a timestamp
         val timestamp = timeFormat.format(Date())
         val newMessage = "[$timestamp] $message\n"
 
-        // 2. Añadir al historial
-        // Se añade al inicio (al principio) para que el log más nuevo se vea arriba.
+        // 2. Add to the history
+        // It is added at the beginning so that the newest log is seen at the top.
         _logHistory = newMessage + _logHistory
 
-        // 3. Emitir el historial completo.
-        // Usa tryEmit para no suspender si no hay colectores, aunque con replay=1 no suele ser un problema.
+        // 3. Emit the complete history.
         _protocolLog.emit(_logHistory)
     }
 
     /**
-     * Limpia el historial de logs y notifica a los suscriptores.
+     * Clears the log history and notifies subscribers.
      */
     suspend fun clearLogs() {
         _logHistory = ""

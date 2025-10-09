@@ -7,16 +7,16 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.nfc_reader_01.databinding.FragmentNotificationsBinding
-import com.example.nfc_reader_01.utils.LogManager // Importar el nuevo LogManager
+import com.example.nfc_reader_01.utils.LogManager
 import kotlinx.coroutines.launch
 
+/**
+ * A [Fragment] that displays the protocol logs.
+ */
 class NotificationsFragment : Fragment() {
 
     private var _binding: FragmentNotificationsBinding? = null
     private val binding get() = _binding!!
-
-    // Usaremos un ViewModel para el Fragmento (si es necesario para UI state),
-    // pero el log lo obtendremos del LogManager.
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -33,33 +33,33 @@ class NotificationsFragment : Fragment() {
     }
 
     /**
-     * Configura el collector del Kotlin Flow para recibir los logs.
-     * Esto reemplaza a la función 'setupLogObserver' que usaba LiveData.
+     * Sets up the Kotlin Flow collector to receive logs.
+     * This replaces the 'setupLogObserver' function that used LiveData.
      */
     private fun setupLogCollector() {
-        // Usamos viewLifecycleOwner.lifecycleScope para garantizar que la recolección
-        // se detiene automáticamente cuando la vista del fragmento se destruye.
+        // We use viewLifecycleOwner.lifecycleScope to ensure that the collection
+        // stops automatically when the fragment's view is destroyed.
         viewLifecycleOwner.lifecycleScope.launch {
-            // El fragmento colecta (consume) el flujo de logs.
+            // The fragment collects (consumes) the log flow.
             LogManager.protocolLog.collect { logs ->
-                // logs es un String que ya contiene el historial completo formateado.
+                // logs is a String that already contains the complete formatted history.
                 if (logs.isNotEmpty()) {
                     binding.textViewProtocolLogs.text = logs
-                    // Llamamos a la función de scroll para mostrar siempre el más reciente (al inicio)
-                    // NOTA: Si los logs nuevos se añaden al inicio, quizás no necesites hacer scroll a menos
-                    // que quieras asegurarte de que la parte superior de la vista siempre es visible.
+                    // We call the scroll function to always show the most recent (at the beginning)
                     scrollToTop()
                 } else {
-                    binding.textViewProtocolLogs.text = "No hay eventos registrados."
+                    binding.textViewProtocolLogs.text = "No events registered."
                 }
             }
         }
     }
 
-    // Función de ejemplo para el botón de limpiar logs
+    /**
+     * Sets up the listener for the clear logs button.
+     */
     private fun setupClearButton() {
         binding.buttonClearLogs.setOnClickListener {
-            // Lanzar la corrutina para llamar a la función suspend de LogManager
+            // Launch the coroutine to call the suspend function of LogManager
             viewLifecycleOwner.lifecycleScope.launch {
                 LogManager.clearLogs()
             }
@@ -68,10 +68,10 @@ class NotificationsFragment : Fragment() {
 
 
     /**
-     * Mueve el scroll del TextView al inicio para ver el log más reciente.
+     * Moves the scroll of the TextView to the beginning to see the most recent log.
      */
     private fun scrollToTop() {
-        // Simplemente mueve el cursor al inicio del texto (índice 0)
+        // Simply moves the cursor to the beginning of the text (index 0)
         binding.textViewProtocolLogs.scrollTo(0, 0)
     }
 

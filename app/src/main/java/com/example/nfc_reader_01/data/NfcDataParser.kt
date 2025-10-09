@@ -4,20 +4,24 @@ import android.nfc.NdefMessage
 import android.nfc.NdefRecord
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.nio.charset.Charset
 import java.util.concurrent.TimeUnit
 import kotlin.experimental.and
 
 
 // =================================================================
-// ESTRUCTURAS DE DATOS (DATA CLASSES)
+// DATA STRUCTURES (DATA CLASSES)
 // =================================================================
 
 /**
- * Bloque 0x81: Datos de Identidad (12 bytes: Int + Int + Int).
+ * Block 0x81: Identity Data (12 bytes: Int + Int + Int).
+ *
+ * @property deviceId The unique identifier of the device.
+ * @property firmwareVersion The firmware version of the device.
+ * @property lastConfigurationDate The date of the last configuration.
  */
 data class IdentityData(
     val deviceId: Long,
@@ -45,24 +49,34 @@ data class IdentityData(
 
 
 /**
- * Bloque 0x82: Datos de Proceso (36 bytes = 9 enteros de 4 bytes).
+ * Block 0x82: Process Data (36 bytes = 9 integers of 4 bytes).
+ *
+ * @property volume The volume.
+ * @property flowRate The flow rate.
+ * @property temperature The temperature.
+ * @property battery The battery level.
+ * @property statusFlags The status flags.
+ * @property directFlowPeriod The direct flow period.
+ * @property reverseFlowPeriod The reverse flow period.
+ * @property noFlowPeriod The no-flow period.
+ * @property leakageFlowPeriod The leakage flow period.
  */
 data class ProcessData(
-    val volume: Int,            // Volumen
-    val flowRate: Int,          // Tasa de flujo
-    val temperature: Int,       // Temperatura
-    val battery: Int,           // Nivel de batería
-    val statusFlags: Int,       // Flags de estado
-    val directFlowPeriod: Int,  // Periodo de flujo directo
-    val reverseFlowPeriod: Int, // Periodo de flujo inverso
-    val noFlowPeriod: Int,      // Periodo sin flujo
-    val leakageFlowPeriod: Int, // Periodo de fuga (leakage)
+    val volume: Int,
+    val flowRate: Int,
+    val temperature: Int,
+    val battery: Int,
+    val statusFlags: Int,
+    val directFlowPeriod: Int,
+    val reverseFlowPeriod: Int,
+    val noFlowPeriod: Int,
+    val leakageFlowPeriod: Int,
 )
 
 
 /**
- * Bloque 0x83: Datos de Configuración (23 floats + 1 Int = 96 bytes total).
- * El comando de ESCRITURA (0x04) envía los 23 floats + el Int del timestamp (96 bytes de datos).
+ * Block 0x83: Configuration Data (23 floats + 1 Int = 96 bytes total).
+ * The WRITE command (0x04) sends the 23 floats + the Int of the timestamp (96 bytes of data).
  */
 data class ConfigurationData(
     val kMeter: Float,
@@ -88,69 +102,95 @@ data class ConfigurationData(
     val fcQ3_flow: Float,
     val fcQ3_error: Float,
     val fcQ3_temperature: Float,
-    val lastConfigurationDate: Int, // Campo de escritura/lectura. Timestamp Unix (segundos).
-)
-
-
-data class EngineeringData(
-    val volumeLiters: Int,      // Volumen en litros
-    val volumeLitersUncal: Int, // Volumen en litros sin calibrar
-    val temperatureUncal: Int, // Temperatura sin calibrar
-    val flowUncal: Int,        // caudal sin calibrar
-    val ttof: Int,             // TToF
-    val dtof: Int,             // DToF
-    val stdDev: Int,           // Desviacion estandard
-    val time: Int,             // Tiempo
-    val chipTemperature: Int,  // Temperatura interna
-    val lux: Int,              // Luxs
-    val rakFrameCounter: Int,  // RAK Frame Counter
+    val lastConfigurationDate: Int, // Read/write field. Unix timestamp (seconds).
 )
 
 
 /**
- * Clase Contenedora para el LiveData del ViewModel.
- * Define la estructura que se observa en NotificationsFragment.kt y se actualiza en MainActivity.kt.
- * Se incluye 'rawNdefRecords' para compatibilidad con código antiguo, aunque no se use.
+ * Engineering Data.
+ *
+ * @property volumeLiters The volume in liters.
+ * @property volumeLitersUncal The uncalibrated volume in liters.
+ * @property temperatureUncal The uncalibrated temperature.
+ * @property flowUncal The uncalibrated flow.
+ * @property ttof Time To Flight.
+ * @property dtof Delta Time of Flight.
+ * @property stdDev The standard deviation.
+ * @property time The time.
+ * @property chipTemperature The internal temperature.
+ * @property lux The lux value.
+ * @property rakFrameCounter The RAK frame counter.
+ */
+data class EngineeringData(
+    val volumeLiters: Int,
+    val volumeLitersUncal: Int,
+    val temperatureUncal: Int,
+    val flowUncal: Int,
+    val ttof: Int,
+    val dtof: Int,
+    val stdDev: Int,
+    val time: Int,
+    val chipTemperature: Int,
+    val lux: Int,
+    val rakFrameCounter: Int,
+)
+
+
+/**
+ * Container class for the ViewModel's LiveData.
+ * Defines the structure observed in NotificationsFragment.kt and updated in MainActivity.kt.
+ * 'rawNdefRecords' is included for compatibility with old code, although it is not used.
+ *
+ * @property identityData The identity data.
+ * @property processData The process data.
+ * @property configData The configuration data.
+ * @property engineeringData The engineering data.
+ * @property rawNdefRecords The raw NDEF records.
  */
 data class NdefRecordsData(
     val identityData: IdentityData? = null,
     val processData: ProcessData? = null,
     val configData: ConfigurationData? = null,
     val engineeringData: EngineeringData? = null,
-    // Propiedad que el código antiguo esperaba, aunque no se esté llenando
     val rawNdefRecords: List<NdefRecord>? = null
 )
 
 
 // =================================================================
-// PARSER BINARIO Y CREADOR DE COMANDOS NDEF
+// BINARY PARSER AND NDEF COMMAND CREATOR
 // =================================================================
 
+/**
+ * Object to parse NFC data and create NDEF command messages.
+ */
 object NfcDataParser {
 
-    // --- Definición de Comandos (App -> TAG) y Tipos MIME ---
+    // --- Command Definitions (App -> TAG) and MIME Types ---
     private val COMMAND_ID_DATA: Byte = 0x01.toByte()
     private val COMMAND_PROCESS_DATA: Byte = 0x02.toByte()
     private val COMMAND_CONFIG_DATA: Byte = 0x03.toByte()
     private val COMMAND_WRITE_CONFIG: Byte = 0x04.toByte()
     private val COMMAND_ENGINEERING_DATA: Byte = 0x05.toByte()
-    const val COMMAND_ID_SAVE_CONFIG: Byte = 0x04 // Comando para guardar (escribir) la configuración
+    const val COMMAND_ID_SAVE_CONFIG: Byte = 0x04 // Command to save (write) the configuration
 
     private val MIME_TYPE_COMMAND = "application/x-cmd"
     private val MIME_TYPE_DATA = "application/x-data"
 
 
     // -----------------------------------------------------------------------
-    // --- PARSING DE RESPUESTAS (0x81, 0x82, 0x83) ---
+    // --- RESPONSE PARSING (0x81, 0x82, 0x83) ---
     // -----------------------------------------------------------------------
 
     /**
-     * Convierte el ByteArray de 36 bytes (respuesta 0x82) en un objeto ProcessData estructurado.
+     * Converts the 36-byte ByteArray (response 0x82) into a structured ProcessData object.
+     * @param processBytes The 36-byte array to parse.
+     * @return A [ProcessData] object.
+     * @throws IllegalArgumentException if the byte array is not 36 bytes long.
      */
     fun parseProcessData(processBytes: ByteArray): ProcessData {
-        // El tamaño esperado es 36 bytes (9 Ints).
+        // The expected size is 36 bytes (9 Ints).
         if (processBytes.size != 36) {
-            throw IllegalArgumentException("El tamaño de datos de proceso debe ser 36 bytes (9 Ints). Recibido: ${processBytes.size}")
+            throw IllegalArgumentException("The process data size must be 36 bytes (9 Ints). Received: ${processBytes.size}")
         }
 
         val buffer = ByteBuffer.wrap(processBytes).order(ByteOrder.LITTLE_ENDIAN)
@@ -169,16 +209,19 @@ object NfcDataParser {
     }
 
     /**
-     * Convierte el ByteArray de 96 bytes (respuesta 0x83) en un objeto ConfigurationData estructurado.
-     * La respuesta del TAG (0x83) debe incluir el timestamp (96 bytes total).
+     * Converts the 96-byte ByteArray (response 0x83) into a structured ConfigurationData object.
+     * The TAG's response (0x83) must include the timestamp (96 bytes total).
+     * @param configBytes The 96-byte array to parse.
+     * @return A [ConfigurationData] object.
+     * @throws IllegalArgumentException if the byte array is not 96 bytes long.
      */
     fun parseConfigData(configBytes: ByteArray): ConfigurationData {
-        // El tamaño esperado es 96 bytes (23 Floats + 1 Int).
+        // The expected size is 96 bytes (23 Floats + 1 Int).
         if (configBytes.size != 96) {
-            throw IllegalArgumentException("El tamaño de datos de configuración debe ser 96 bytes (23F + 1I). Recibido: ${configBytes.size}")
+            throw IllegalArgumentException("The configuration data size must be 96 bytes (23F + 1I). Received: ${configBytes.size}")
         }
 
-        // Se usa ByteBuffer con LITTLE_ENDIAN
+        // Use ByteBuffer with LITTLE_ENDIAN
         val buffer = ByteBuffer.wrap(configBytes).order(ByteOrder.LITTLE_ENDIAN)
 
         return ConfigurationData(
@@ -205,30 +248,34 @@ object NfcDataParser {
             fcQ3_flow = buffer.getFloat(),
             fcQ3_error = buffer.getFloat(),
             fcQ3_temperature = buffer.getFloat(),
-            lastConfigurationDate = buffer.getInt(), // Último Int (timestamp)
+            lastConfigurationDate = buffer.getInt(), // Last Int (timestamp)
         )
     }
 
     /**
-     * Convierte el ByteArray de 12 bytes (respuesta 0x81) en IdentityData estructurada.
+     * Converts the 12-byte ByteArray (response 0x81) into structured IdentityData.
      *
-     * ESTRUCTURA DE 12 BYTES (3 x Int):
+     * 12-BYTE STRUCTURE (3 x Int):
      * 1. Device ID (Int) - 4 bytes
      * 2. Firmware Version (Int) - 4 bytes
      * 3. Configuration Timestamp (Int) - 4 bytes
+     *
+     * @param identityBytes The 12-byte array to parse.
+     * @return An [IdentityData] object.
+     * @throws IllegalArgumentException if the byte array is not 12 bytes long.
      */
     fun parseIdentityData(identityBytes: ByteArray): IdentityData {
-        // El tamaño esperado debe ser 12 bytes.
+        // The expected size must be 12 bytes.
         val expectedSize = 12
         if (identityBytes.size != expectedSize) {
-            throw IllegalArgumentException("El tamaño de datos de identidad (0x81) debe ser $expectedSize bytes (3 x Int). Recibido: ${identityBytes.size}")
+            throw IllegalArgumentException("The identity data size (0x81) must be $expectedSize bytes (3 x Int). Received: ${identityBytes.size}")
         }
 
         val buffer = ByteBuffer.wrap(identityBytes).order(ByteOrder.LITTLE_ENDIAN)
 
-        // 1. Device ID (4 bytes) -> Se lee como Int y se convierte a Long sin signo.
+        // 1. Device ID (4 bytes) -> Read as Int and converted to an unsigned Long.
         val signedDeviceIdRaw = buffer.getInt()
-        // Usamos and 0xFFFFFFFFL para manejar correctamente el valor de 32 bits como un Long sin signo.
+        // We use 'and 0xFFFFFFFFL' to correctly handle the 32-bit value as an unsigned Long.
         val deviceIdRaw = signedDeviceIdRaw.toLong() and 0xFFFFFFFFL
 
         // 2. Firmware Version (4 bytes)
@@ -238,10 +285,10 @@ object NfcDataParser {
         val firmwareVersionMain   = (firmwareVersionRaw shr 16 and 0xFF).toByte()
         val firmwareVersionString = String.format(Locale.US, "%d.%d.%d", firmwareVersionMain, firmwareVersionMinor, firmwareVersionLast)
 
-        // 3. Configuration Timestamp (4 bytes) -> Leído como Int
+        // 3. Configuration Timestamp (4 bytes) -> Read as Int
         val configTimestamp = buffer.getInt()
 
-        // Asumimos que el timestamp Unix es en segundos y lo convertimos a milisegundos para Date
+        // Assume the Unix timestamp is in seconds and convert it to milliseconds for Date
         val dateMillis = configTimestamp.toLong() * 1000
         val date = Date(dateMillis)
         val formatter = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault())
@@ -255,12 +302,15 @@ object NfcDataParser {
     }
 
     /**
-     * Convierte el ByteArray de 40 bytes (respuesta 0x85) en un objeto EngineeringData estructurado.
+     * Converts the 44-byte ByteArray (response 0x85) into a structured EngineeringData object.
+     * @param engineeringBytes The 44-byte array to parse.
+     * @return An [EngineeringData] object.
+     * @throws IllegalArgumentException if the byte array is not 44 bytes long.
      */
     fun parseEngineeringData(engineeringBytes: ByteArray): EngineeringData {
-        // El tamaño esperado es 44 bytes (11 Ints).
+        // The expected size is 44 bytes (11 Ints).
         if (engineeringBytes.size != 44) {
-            throw IllegalArgumentException("El tamaño de datos de Ingenieria debe ser 44 bytes. Recibido: ${engineeringBytes.size}")
+            throw IllegalArgumentException("The engineering data size must be 44 bytes. Received: ${engineeringBytes.size}")
         }
 
         val buffer = ByteBuffer.wrap(engineeringBytes).order(ByteOrder.LITTLE_ENDIAN)
@@ -283,20 +333,22 @@ object NfcDataParser {
 
 
     // -----------------------------------------------------------------------
-    // --- CREACIÓN DE COMANDOS (0x01, 0x02, 0x03, 0x04) ---
+    // --- COMMAND CREATION (0x01, 0x02, 0x03, 0x04) ---
     // -----------------------------------------------------------------------
 
     /**
-     * Serializa los 23 floats y el Int del timestamp (96 bytes) en un ByteArray.
-     * Esta función es la base para el comando 0x04 de ESCRITURA.
+     * Serializes the 23 floats and the Int of the timestamp (96 bytes) into a ByteArray.
+     * This function is the basis for the 0x04 WRITE command.
+     * @param config The [ConfigurationData] to serialize.
+     * @return A 96-byte array.
      */
     fun serializeConfigData(config: ConfigurationData): ByteArray {
 
-        // PASO CRÍTICO: Actualizar la fecha de la configuración
-        // Obtenemos el tiempo actual en milisegundos y lo convertimos a segundos (Int de 4 bytes).
+        // CRITICAL STEP: Update the configuration date
+        // We get the current time in milliseconds and convert it to seconds (4-byte Int).
         val currentEpochSeconds = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()).toInt()
 
-        // ASIGNACIÓN CRÍTICA: 96 bytes (23 floats + 1 int = 24 elementos * 4 bytes)
+        // CRITICAL ASSIGNMENT: 96 bytes (23 floats + 1 int = 24 elements * 4 bytes)
         val buffer = ByteBuffer.allocate(96).order(ByteOrder.LITTLE_ENDIAN)
 
         buffer.putFloat(config.kMeter)
@@ -322,71 +374,76 @@ object NfcDataParser {
         buffer.putFloat(config.fcQ3_flow)
         buffer.putFloat(config.fcQ3_error)
         buffer.putFloat(config.fcQ3_temperature)
-        buffer.putInt(currentEpochSeconds) // Escribimos el nuevo timestamp
-        return buffer.array() // Retorna exactamente 96 bytes.
+        buffer.putInt(currentEpochSeconds) // Write the new timestamp
+        return buffer.array() // Returns exactly 96 bytes.
     }
 
     /**
-     * Crea un NdefMessage con UN ÚNICO NdefRecord de tipo MIME_TYPE_COMMAND.
-     * REDUCCIÓN CRÍTICA: El payload es ahora de 1 byte para minimizar el tamaño del mensaje NDEF
-     * y evitar problemas de truncamiento en la escritura (0x01, 0x02, 0x03).
+     * Creates an NdefMessage with a SINGLE NdefRecord of type MIME_TYPE_COMMAND.
+     * CRITICAL REDUCTION: The payload is now 1 byte to minimize the NDEF message size
+     * and avoid truncation issues during writing (0x01, 0x02, 0x03).
      *
-     * @param commandId El ID del comando (Byte) a enviar (ej: 0x01).
-     * @return Un NdefMessage listo para ser escrito en el Tag.
+     * @param commandId The ID of the command (Byte) to send (e.g., 0x01).
+     * @return An NdefMessage ready to be written to the Tag.
      */
     fun createReadCommandMessage(commandId: Byte): NdefMessage {
-        // Payload minimalista: solo el ID del comando (1 byte).
+        // Minimalist payload: only the command ID (1 byte).
         val payload = byteArrayOf(commandId)
 
         val commandRecord = NdefRecord.createMime(MIME_TYPE_COMMAND, payload)
-        // El NdefMessage contiene UN SOLO registro
+        // The NdefMessage contains a SINGLE record
         return NdefMessage(commandRecord)
     }
 
     /**
-     * CRÍTICA para el Comando 0x04 (Escritura). ¡UN SOLO REGISTRO!
-     * Combina un prefijo de comando de 1 byte (0x04) con la data de configuración serializada (96 bytes).
-     * Payload Total: 97 bytes.
+     * CRITICAL for Command 0x04 (Write). A SINGLE RECORD!
+     * Combines a 1-byte command prefix (0x04) with the serialized configuration data (96 bytes).
+     * Total Payload: 97 bytes.
      *
-     * @param writeData Los datos de configuración serializados (96 bytes).
-     * @return El NdefMessage con un payload total de 97 bytes listo para ser escrito.
+     * @param writeData The serialized configuration data (96 bytes).
+     * @return The NdefMessage with a total payload of 97 bytes ready to be written.
+     * @throws IllegalArgumentException if the write data is not 96 bytes long.
+     * @throws IllegalStateException if the final payload is not 97 bytes long.
      */
     fun createWriteConfigMessage(writeData: ByteArray): NdefMessage {
         if (writeData.size != 96) {
-            throw IllegalArgumentException("El payload de datos de configuración debe ser de 96 bytes. Recibido: ${writeData.size}")
+            throw IllegalArgumentException("The configuration data payload must be 96 bytes. Received: ${writeData.size}")
         }
 
-        // El payload total debe tener el tamaño del comando (1 byte) + los datos (96 bytes)
+        // The total payload must have the size of the command (1 byte) + the data (96 bytes)
         val fullPayload = ByteArray(1 + writeData.size) // 97 bytes
 
-        // Primer byte: el comando 0x04
+        // First byte: the 0x04 command
         fullPayload[0] = COMMAND_WRITE_CONFIG
 
-        // Copiar los 96 bytes de datos después del comando
+        // Copy the 96 bytes of data after the command
         System.arraycopy(writeData, 0, fullPayload, 1, writeData.size)
 
         if (fullPayload.size != 97) {
-            // Este error nunca debería ocurrir si el chequeo de 96 bytes es correcto
-            throw IllegalStateException("Error de protocolo: El payload total para el Comando 0x04 debe ser de 97 bytes, pero fue ${fullPayload.size}")
+            // This error should never occur if the 96-byte check is correct
+            throw IllegalStateException("Protocol error: The total payload for Command 0x04 must be 97 bytes, but was ${fullPayload.size}")
         }
 
-        // Creamos UN SOLO registro NDEF, como requiere el hardware del TAG.
+        // We create a SINGLE NDEF record, as required by the TAG's hardware.
         val record = NdefRecord.createMime(MIME_TYPE_COMMAND, fullPayload)
         return NdefMessage(arrayOf(record))
     }
 
 
     /**
-     * Intenta decodificar el payload del NdefRecord.
-     * Esto asume que el payload es una cadena de texto simple codificada en UTF-8.
+     * Tries to decode the payload of the NdefRecord.
+     * This assumes the payload is a simple text string encoded in UTF-8.
+     *
+     * @param record The NDEF record to parse.
+     * @return The decoded string, or null if parsing fails.
      */
     fun parseDataPayload(record: NdefRecord): String? {
         if (record.tnf == NdefRecord.TNF_MIME_MEDIA && String(record.type) == MIME_TYPE_DATA) {
             return try {
-                // Asume codificación UTF-8
+                // Assume UTF-8 encoding
                 String(record.payload, Charset.forName("UTF-8"))
             } catch (e: Exception) {
-                // Error al decodificar
+                // Error decoding
                 null
             }
         }
