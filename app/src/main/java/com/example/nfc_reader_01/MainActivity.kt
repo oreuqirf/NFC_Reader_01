@@ -9,13 +9,14 @@ import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.Ndef
 import android.nfc.tech.NdefFormatable
-import android.nfc.tech.NfcV // Protocolo ISO 15693
+import android.nfc.tech.NfcV // ISO 15693 Protocol
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.findNavController
@@ -33,24 +34,23 @@ import java.nio.charset.StandardCharsets
 import kotlin.experimental.and
 
 // --------------------------------------------------------------------------
-// --- CONSTANTES DE PROTOCOLO Y NDEF ---
+// --- PROTOCOL AND NDEF CONSTANTS ---
 // --------------------------------------------------------------------------
 private val CMD_READ_IDENTITY: Byte = 0x01
 private val CMD_READ_PROCESS: Byte = 0x02
 private val CMD_READ_ENGINEERING: Byte = 0x05
-private val CMD_READ_CONFIG: Byte = 0x03 // Comando para leer configuración
-private val CMD_WRITE_CONFIG: Byte = 0x04 // Comando para escribir configuración (requiere 96 bytes de payload)
+private val CMD_READ_CONFIG: Byte = 0x03 // Command to read configuration
+private val CMD_WRITE_CONFIG: Byte = 0x04 // Command to write configuration (requires 96 bytes of payload)
 private val CMD_FACTORY_RESET: Byte = 0x0A
 private val CMD_GET_SYSTEM_INFO: Byte = 0x2B.toByte()
 
-// MIME Type para enviar el comando al TAG (Primer Scan)
+// MIME Type to send the command to the TAG (First Scan)
 private const val MIME_COMMAND_TYPE = "application/x-cmd"
-// MIME Type para esperar la respuesta de datos del TAG (Segundo Scan)
+// MIME Type to wait for the data response from the TAG (Second Scan)
 private const val MIME_RESPONSE_TYPE = "application/x-data"
 
 /**
- * Actividad principal que maneja la inicialización de NFC y la comunicación NDEF
- * de doble escaneo.
+ * Main activity that handles NFC initialization and dual-scan NDEF communication.
  */
 class MainActivity : AppCompatActivity(), NfcInteractionListener {
 
@@ -58,7 +58,9 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
     private lateinit var binding: ActivityMainBinding
     private var nfcAdapter: NfcAdapter? = null
     private lateinit var pendingIntent: PendingIntent
-    private val sharedViewModel: SharedNfcViewModel by viewModels()
+    private val sharedViewModel: SharedNfcViewModel by viewModels {
+        ViewModelProvider.AndroidViewModelFactory(application)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,35 +83,35 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
     }
 
     // --------------------------------------------------------------------------
-    // --- IMPLEMENTACIÓN DE NFCINTERACTIONLISTENER ---
+    // --- NFCINTERACTIONLISTENER IMPLEMENTATION ---
     // --------------------------------------------------------------------------
 
     override fun navigateToDashboard() {
         findNavController(R.id.nav_host_fragment_activity_main).navigate(R.id.navigation_dashboard)
     }
 
-    /** Solicita la ejecución de un comando (Primer Scan) */
+    /** Requests the execution of a command (First Scan) */
     override fun requestNextCommand(commandId: Byte) {
-        // Para comandos de lectura/reset, el payload es solo el ID.
-        sharedViewModel.setConfigDataToWrite(null) // Limpiamos cualquier data de escritura pendiente
+        // For read/reset commands, the payload is just the ID.
+        sharedViewModel.setConfigDataToWrite(null) // We clear any pending write data
         sharedViewModel.sendCommand(commandId)
-        sharedViewModel.setUiMessage("Primer Scan: TAG Ready. Esperando NDEF para escribir comando (0x${commandId.toHexString()}).")
+        sharedViewModel.setUiMessage("First Scan: TAG Ready. Waiting for NDEF to write command (0x${commandId.toHexString()}).")
     }
 
     override fun requestWriteConfig() {
-        // El fragment ya debe haber puesto los 96 bytes en configDataToWrite.
-        sharedViewModel.sendCommand(CMD_WRITE_CONFIG) // Seteamos 0x04
-        sharedViewModel.setUiMessage("Primer Scan: TAG Ready. Esperando NDEF para escribir comando (0x${CMD_WRITE_CONFIG.toHexString()} + 96 bytes).")
+        // The fragment should have already placed the 96 bytes in configDataToWrite.
+        sharedViewModel.sendCommand(CMD_WRITE_CONFIG) // We set 0x04
+        sharedViewModel.setUiMessage("First Scan: TAG Ready. Waiting for NDEF to write command (0x${CMD_WRITE_CONFIG.toHexString()} + 96 bytes).")
     }
 
     // --------------------------------------------------------------------------
-    // --- LÓGICA DE NFC Y CICLO DE VIDA ---
+    // --- NFC LOGIC AND LIFECYCLE ---
     // --------------------------------------------------------------------------
 
     private fun setupNfc() {
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
         if (nfcAdapter == null) {
-            lifecycleScope.launch { LogManager.log("NFC: Dispositivo no compatible con NFC.") }
+            lifecycleScope.launch { LogManager.log("NFC: Device not compatible with NFC.") }
         }
 
         val intent = Intent(this, javaClass).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -125,19 +127,19 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
     private fun setupViewModelObservers() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                // 1. Observador para el Comando Pendiente (actualiza UI Message)
+                // 1. Observer for the Pending Command (updates UI Message)
                 launch {
                     sharedViewModel.pendingCommand.collect { command ->
                         if (command != null) {
-                            sharedViewModel.setUiMessage("Primer Scan: Comando 0x${command.toHexString()} en espera de escritura NDEF...")
+                            sharedViewModel.setUiMessage("First Scan: Command 0x${command.toHexString()} waiting for NDEF write...")
                         } else if (sharedViewModel.nfcTagInfo.value == null) {
-                            sharedViewModel.setUiMessage("TAG Ready: Esperando primer escaneo NDEF (para escribir comando)...")
+                            sharedViewModel.setUiMessage("TAG Ready: Waiting for first NDEF scan (to write command)...")
                         }
                     }
                 }
 
-                // 2. Observador para los Mensajes Toast/SnackBar (writeStatus SharedFlow)
-                // Este observador es el que convierte las emisiones del ViewModel en Toasts.
+                // 2. Observer for Toast/SnackBar Messages (writeStatus SharedFlow)
+                // This observer is the one that converts the ViewModel emissions into Toasts.
                 launch {
                     sharedViewModel.writeStatus.collect { status ->
                         Toast.makeText(this@MainActivity, status, Toast.LENGTH_LONG).show()
@@ -148,7 +150,7 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
     }
 
     /**
-     * Habilita el despacho de primer plano para priorizar la detección de NDEF y otras tecnologías.
+     * Enables foreground dispatch to prioritize the detection of NDEF and other technologies.
      */
     override fun onResume() {
         super.onResume()
@@ -159,7 +161,7 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
             IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED)
         )
 
-        // Incluimos todas las tecnologías clave, incluida NfcV (confirmada por el usuario)
+        // We include all key technologies, including NfcV (confirmed by the user)
         val techList = arrayOf(
             arrayOf(Ndef::class.java.name),
             arrayOf(NdefFormatable::class.java.name),
@@ -180,17 +182,17 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
     }
 
     /**
-     * Muestra en el log todas las tecnologías detectadas en el TAG.
+     * Displays in the log all the technologies detected in the TAG.
      */
     private fun logTagTechnologies(tag: Tag) {
         val techList = tag.techList.joinToString(", ")
         lifecycleScope.launch {
-            LogManager.log("TAG DIAGNÓSTICO: ID=${tag.id.toHexString()}, Techs Detectadas=[$techList]")
+            LogManager.log("TAG DIAGNOSTIC: ID=${tag.id.toHexString()}, Techs Detected=[$techList]")
         }
     }
 
     /**
-     * Procesa el Intent de descubrimiento de TAG.
+     * Processes the TAG discovery Intent.
      */
     private fun handleIntent(intent: Intent) {
         val tag: Tag? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -214,141 +216,141 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
     }
 
     /**
-     * Maneja la transacción NDEF, priorizando NDEF/NdefFormatable, y usando NfcV como fallback de formato forzado.
-     * **Contiene el bloque try/catch global para evitar cierres inesperados de la aplicación.**
+     * Handles the NDEF transaction, prioritizing NDEF/NdefFormatable, and using NfcV as a forced format fallback.
+     * **Contains the global try/catch block to avoid unexpected application closures.**
      */
     private suspend fun processNdefTransaction(tag: Tag) = withContext(Dispatchers.IO) {
-        // Bloque try/catch global para atrapar cualquier excepción que se propague,
-        // garantizando que la coroutine no falle y no cierre la aplicación.
+        // Global try/catch block to catch any exception that propagates,
+        // ensuring that the coroutine does not fail and does not close the application.
         try {
             val commandId = sharedViewModel.pendingCommand.value
             val ndef = Ndef.get(tag)
             val ndefFormatable = NdefFormatable.get(tag)
-            val nfcV = NfcV.get(tag) // Obtenemos el objeto NfcV para el fallback
+            val nfcV = NfcV.get(tag) // We get the NfcV object for the fallback
 
-            // Logging de diagnóstico
+            // Diagnostic logging
             lifecycleScope.launch {
                 LogManager.log("DBG NDEF Check: Ndef.get(tag) = ${if(ndef != null) "OK" else "NULL"}")
                 LogManager.log("DBG NDEF Check: NdefFormatable.get(tag) = ${if(ndefFormatable != null) "OK" else "NULL"}")
                 LogManager.log("DBG Fallback Check: NfcV.get(tag) = ${if(nfcV != null) "OK" else "NULL"}")
             }
 
-            // --- CASO 1: COMANDO PENDIENTE (Primer Scan) ---
+            // --- CASE 1: PENDING COMMAND (First Scan) ---
             if (commandId != null) {
                 var success = false
 
-                // 1. Intentar escritura NDEF estándar (TAG ya es NDEF válido y escribible)
+                // 1. Try standard NDEF write (TAG is already a valid and writable NDEF)
                 if (ndef != null) {
                     success = executeNdefWriteCommand(ndef, commandId)
                 }
 
-                // 2. Intentar formateo y escritura NDEF (TAG es formateable, pero el CC podría estar corrupto)
+                // 2. Try formatting and NDEF write (TAG is formattable, but the CC could be corrupt)
                 if (!success && ndefFormatable != null) {
-                    // Si esto falla (devuelve false), pasamos al fallback avanzado (paso 3)
+                    // If this fails (returns false), we move on to the advanced fallback (step 3)
                     success = executeNdefFormatAndWriteCommand(ndefFormatable, commandId)
                 }
 
-                // 3. Fallback Avanzado: Si NDEF/NdefFormatable fallaron, pero NfcV está disponible, forzar CC.
+                // 3. Advanced Fallback: If NDEF/NdefFormatable failed, but NfcV is available, force CC.
                 if (!success && nfcV != null) {
-                    lifecycleScope.launch { LogManager.log("Activando Fallback Avanzado: Formateo de CC de bajo nivel por NfcV.") }
+                    lifecycleScope.launch { LogManager.log("Activating Advanced Fallback: Low-level CC formatting by NfcV.") }
 
                     val formatSuccess = executeNfcVForceFormatOnlyFallback(nfcV)
 
                     if (formatSuccess) {
-                        sharedViewModel.setUiMessage("Primer Scan FORZADO (NfcV) OK: TAG formateado a NDEF. ¡Acerque el TAG **inmediatamente** para escribir el comando 0x${commandId.toHexString()}!")
-                        // EMISIÓN DE TOAST DE FALLBACK EXITOSO
-                        sharedViewModel.emitWriteStatus("FALLBACK NfcV OK: TAG formateado. Escanee de nuevo para escribir.")
+                        sharedViewModel.setUiMessage("First FORCED Scan (NfcV) OK: TAG formatted to NDEF. Bring the TAG **immediately** to write the command 0x${commandId.toHexString()}!")
+                        // SUCCESSFUL FALLBACK TOAST EMISSION
+                        sharedViewModel.emitWriteStatus("FALLBACK NfcV OK: TAG formatted. Scan again to write.")
                     } else {
-                        val errorMsg = "ERROR: Fallo al forzar la escritura/formato del comando 0x${commandId.toHexString()}. TAG sin soporte NfcV o bloqueado."
+                        val errorMsg = "ERROR: Failed to force write/format command 0x${commandId.toHexString()}. TAG without NfcV support or locked."
                         sharedViewModel.setUiMessage(errorMsg)
-                        // EMISIÓN DE TOAST DE FALLBACK FALLIDO
-                        sharedViewModel.emitWriteStatus("ERROR NfcV: Fallo al forzar el formateo. Bloqueado o sin soporte.")
+                        // FAILED FALLBACK TOAST EMISSION
+                        sharedViewModel.emitWriteStatus("ERROR NfcV: Failed to force formatting. Locked or unsupported.")
                     }
-                    // Salir después del intento de formateo forzado (se requiere un nuevo escaneo para la escritura NDEF)
+                    // Exit after the forced formatting attempt (a new scan is required for the NDEF write)
                     return@withContext
                 }
 
-                // Si la escritura NDEF (paso 1 o 2) fue exitosa, el comando ya se ha limpiado dentro del método de escritura
-                // para evitar el doble escaneo.
+                // If the NDEF write (step 1 or 2) was successful, the command has already been cleared within the write method
+                // to avoid double scanning.
                 if (!success) {
-                    sharedViewModel.setUiMessage("ERROR: Fallo al procesar el comando. TAG no NDEF y sin soporte para formato forzado.")
+                    sharedViewModel.setUiMessage("ERROR: Failed to process command. TAG not NDEF and without support for forced format.")
                 }
                 return@withContext
             }
 
-            // --- CASO 2: NO HAY COMANDO PENDIENTE (Segundo Scan) ---
+            // --- CASE 2: NO PENDING COMMAND (Second Scan) ---
             if (ndef != null) {
                 try {
                     ndef.connect()
                     executeNdefReadResponse(ndef)
                 } catch (e: IOException) {
-                    // Este try-catch ya maneja los 'ERROR I/O' específicos de la lectura NDEF.
-                    val errorMsg = "Error NDEF de lectura (I/O): ${e.message}"
+                    // This try-catch already handles the 'I/O ERROR' specific to NDEF reading.
+                    val errorMsg = "NDEF read error (I/O): ${e.message}"
                     lifecycleScope.launch { LogManager.log(errorMsg) }
                     sharedViewModel.setUiMessage(errorMsg)
-                    // sharedViewModel.emitWriteStatus("ERROR NDEF I/O: Fallo al leer la respuesta.") // Toast para I/O
+                    // sharedViewModel.emitWriteStatus("ERROR NDEF I/O: Failed to read response.") // Toast for I/O
                 } finally {
                     if (ndef.isConnected) {
                         try { ndef.close() } catch (_: IOException) {}
                     }
                 }
             } else {
-                // El TAG no es NDEF válido y no hay comando pendiente.
-                sharedViewModel.setUiMessage("Advertencia: TAG no válido/formateado. Listo para recibir comando.")
+                // The TAG is not a valid NDEF and there is no pending command.
+                sharedViewModel.setUiMessage("Warning: Invalid/unformatted TAG. Ready to receive command.")
             }
 
         } catch (e: Exception) {
-            // ** CAPTURA GLOBAL PARA EVITAR EL CIERRE DE LA APP **
-            val errorMsg = "Error CRÍTICO de Coroutine/IO no capturado: ${e.message}"
+            // ** GLOBAL CAPTURE TO AVOID APP CLOSURE **
+            val errorMsg = "CRITICAL Uncaught Coroutine/IO Error: ${e.message}"
             lifecycleScope.launch { LogManager.log("CRASH_PREVENTION_CATCH: $errorMsg") }
-            sharedViewModel.setUiMessage("ERROR CRÍTICO: Fallo general de coroutine. Consulte el Log.")
-            // EMITIMOS UN TOAST GENÉRICO DE ERROR INESPERADO AL USUARIO
-            sharedViewModel.emitWriteStatus("ERROR CRÍTICO: Fallo general no capturado.")
+            sharedViewModel.setUiMessage("CRITICAL ERROR: General coroutine failure. Check the Log.")
+            // WE EMIT A GENERIC UNEXPECTED ERROR TOAST TO THE USER
+            sharedViewModel.emitWriteStatus("CRITICAL ERROR: Uncaught general failure.")
         }
     }
 
     /**
-     * **Helper:** Crea el payload completo del comando NDEF, incluyendo los 96 bytes de
-     * configuración si el comando es CMD_WRITE_CONFIG (0x04).
+     * **Helper:** Creates the full NDEF command payload, including the 96 bytes of
+     * configuration if the command is CMD_WRITE_CONFIG (0x04).
      *
-     * @return ByteArray? El payload completo del comando, o null si faltan datos de configuración.
+     * @return ByteArray? The full command payload, or null if configuration data is missing.
      */
     private fun createNdefCommandPayload(commandId: Byte): ByteArray? {
         return if (commandId == CMD_WRITE_CONFIG) {
             val configDataBytes = sharedViewModel.configDataToWrite.value
             if (configDataBytes == null || configDataBytes.size != 96) {
-                // Generar mensaje de error y Toast
-                sharedViewModel.setUiMessage("ERROR: Comando 0x${CMD_WRITE_CONFIG.toHexString()} solicitado, pero los datos de 96 bytes no están listos en el ViewModel.")
-                sharedViewModel.emitWriteStatus("ERROR: Datos de configuración (96B) no disponibles para escribir.")
+                // Generate error message and Toast
+                sharedViewModel.setUiMessage("ERROR: Command 0x${CMD_WRITE_CONFIG.toHexString()} requested, but the 96-byte data is not ready in the ViewModel.")
+                sharedViewModel.emitWriteStatus("ERROR: Configuration data (96B) not available for writing.")
                 null
             } else {
-                // CRÍTICO: Concatenar el byte del comando (0x04) + los 96 bytes de datos. (97 bytes total)
+                // CRITICAL: Concatenate the command byte (0x04) + the 96 bytes of data. (97 bytes total)
                 byteArrayOf(commandId) + configDataBytes
             }
         } else {
-            // Comandos de lectura/reset (payload de 1 byte)
+            // Read/reset commands (1-byte payload)
             byteArrayOf(commandId)
         }
     }
 
 
     /**
-     * **Primer Scan (Fallback NfcV):** Intenta forzar el formateo NDEF
-     * escribiendo solo la Cabecera de Capacidad (CC) en el Bloque 0.
+     * **First Scan (NfcV Fallback):** Tries to force NDEF formatting
+     * by writing only the Capability Container (CC) in Block 0.
      *
-     * Si tiene éxito, el siguiente escaneo permitirá que Android detecte Ndef o NdefFormatable.
-     * El comando *no* se escribe en este paso.
+     * If successful, the next scan will allow Android to detect Ndef or NdefFormatable.
+     * The command *is not* written in this step.
      */
     private fun executeNfcVForceFormatOnlyFallback(nfcV: NfcV): Boolean {
-        lifecycleScope.launch { LogManager.log("NfcV: Escribiendo solo el Capability Container (CC) en Bloque 0 para forzar el formato NDEF.") }
+        lifecycleScope.launch { LogManager.log("NfcV: Writing only the Capability Container (CC) in Block 0 to force NDEF format.") }
 
-        // --- Parámetros de la operación ISO 15693 ---
-        val flags: Byte = 0x02 // Flags: Direccionamiento simple (no UID), Data Rate High
+        // --- ISO 15693 operation parameters ---
+        val flags: Byte = 0x02 // Flags: Simple addressing (no UID), Data Rate High
         val cmdWriteSingleBlock: Byte = 0x21.toByte()
-        val NDEF_MAX_SIZE: Byte = 0x40 // Tamaño NDEF de 64 bytes (0x40)
+        val NDEF_MAX_SIZE: Byte = 0x40 // NDEF size of 64 bytes (0x40)
 
-        // Bloque de Capacidad NDEF (Capability Container - CC) (4 bytes)
-        // [E1] (Magic Byte), [40] (Version 1.0, Lectura/Escritura), [00] (Max Size High), [40] (Max Size Low: 64 bytes)
+        // NDEF Capability Container (CC) block (4 bytes)
+        // [E1] (Magic Byte), [40] (Version 1.0, Read/Write), [00] (Max Size High), [40] (Max Size Low: 64 bytes)
         val ccBlock = byteArrayOf(
             0xE1.toByte(),
             0x40.toByte(),
@@ -359,24 +361,24 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
         try {
             if (!nfcV.isConnected) nfcV.connect()
 
-            // Comando: [Flags, CMD_WRITE_SINGLE_BLOCK, Block Address (0x00), Data (CC Block)]
+            // Command: [Flags, CMD_WRITE_SINGLE_BLOCK, Block Address (0x00), Data (CC Block)]
             val writeCCCommand = byteArrayOf(flags, cmdWriteSingleBlock, 0x00) + ccBlock
             val response = nfcV.transceive(writeCCCommand)
 
-            // Validación de respuesta ISO 15693 (vacía o byte de estado 0x00 que indica éxito)
+            // ISO 15693 response validation (empty or status byte 0x00 indicating success)
             if (response.isEmpty() || (response.size == 1 && response[0].and(0x01) == 0.toByte())) {
                 return true
             } else {
-                lifecycleScope.launch { LogManager.log("ERROR NfcV CC: El chip devolvió un error en la escritura del CC. Código: ${response.toHexString()}") }
+                lifecycleScope.launch { LogManager.log("ERROR NfcV CC: The chip returned an error on CC write. Code: ${response.toHexString()}") }
                 return false
             }
 
         } catch (e: IOException) {
-            val errorMsg = "Error NfcV (ISO 15693) al forzar el formateo CC: ${e.message}. El chip podría estar totalmente bloqueado."
+            val errorMsg = "NfcV Error (ISO 15693) when forcing CC formatting: ${e.message}. The chip could be completely locked."
             lifecycleScope.launch { LogManager.log(errorMsg) }
             sharedViewModel.setUiMessage(errorMsg)
-            // EMISIÓN DE TOAST DE ERROR NfcV
-            sharedViewModel.emitWriteStatus("ERROR NfcV: Fallo I/O. El chip podría estar totalmente bloqueado.")
+            // NfcV ERROR TOAST EMISSION
+            sharedViewModel.emitWriteStatus("NfcV ERROR: I/O failure. The chip could be completely locked.")
             return false
         } finally {
             if (nfcV.isConnected) {
@@ -387,25 +389,25 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
 
 
     /**
-     * **Primer Scan (Forzado Alto Nivel):** Formatea el TAG y escribe el mensaje NDEF del comando.
-     * (Solo se usa si NdefFormatable está disponible)
+     * **First Scan (High-Level Forced):** Formats the TAG and writes the command's NDEF message.
+     * (Only used if NdefFormatable is available)
      */
     private fun executeNdefFormatAndWriteCommand(ndefFormatable: NdefFormatable, commandId: Byte): Boolean {
 
-        // --- PREPARACIÓN DEL PAYLOAD NDEF (Utilizando la función helper) ---
+        // --- NDEF PAYLOAD PREPARATION (Using the helper function) ---
         val fullPayload = createNdefCommandPayload(commandId)
         if (fullPayload == null) {
-            // El helper ya emitió el Toast/UI Message de error de datos faltantes.
+            // The helper has already emitted the Toast/UI Message of missing data error.
             return false
         }
 
         val logMessage = if (commandId == CMD_WRITE_CONFIG) {
-            "Escribiendo comando 0x${commandId.toHexString()} con 96 bytes de configuración..."
+            "Writing command 0x${commandId.toHexString()} with 96 bytes of configuration..."
         } else {
-            "Escribiendo comando 0x${commandId.toHexString()} (1 byte)..."
+            "Writing command 0x${commandId.toHexString()} (1 byte)..."
         }
 
-        lifecycleScope.launch { LogManager.log("Primer Scan FORZADO (Alto Nivel): TAG será formateado y escrito. $logMessage") }
+        lifecycleScope.launch { LogManager.log("First FORCED Scan (High-Level): TAG will be formatted and written. $logMessage") }
 
         val commandRecord = NdefRecord.createMime(MIME_COMMAND_TYPE, fullPayload)
         val message = NdefMessage(commandRecord)
@@ -414,24 +416,24 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
             ndefFormatable.connect()
             ndefFormatable.format(message)
 
-            // Éxito de la escritura
-            sharedViewModel.setUiMessage("Primer Scan FORZADO ALTO NIVEL OK: Formateado y $logMessage enviado. ¡Acerque el TAG nuevamente para el Segundo Scan!")
-            // EMISIÓN DE TOAST DE ESCRITURA FORZADA EXITOSA
-            sharedViewModel.emitWriteStatus("Escritura Forzada OK: TAG formateado y comando enviado.")
+            // Write success
+            sharedViewModel.setUiMessage("First FORCED HIGH-LEVEL Scan OK: Formatted and $logMessage sent. Bring the TAG close again for the Second Scan!")
+            // SUCCESSFUL FORCED WRITE TOAST EMISSION
+            sharedViewModel.emitWriteStatus("Forced Write OK: TAG formatted and command sent.")
 
-            // Limpiar el comando de inmediato para evitar el doble escaneo/Toast
+            // Clear the command immediately to avoid double scanning/Toast
             sharedViewModel.clearCommand()
 
-            // Limpiar datos de escritura si la operación fue exitosa
+            // Clear write data if the operation was successful
             if (commandId == CMD_WRITE_CONFIG) {
                 sharedViewModel.setConfigDataToWrite(null)
             }
             return true
         } catch (e: IOException) {
-            val errorMsg = "Error NDEF al formatear/escribir: ${e.message}. Recurriendo a NfcV."
+            val errorMsg = "NDEF error when formatting/writing: ${e.message}. Resorting to NfcV."
             lifecycleScope.launch { LogManager.log(errorMsg) }
-            // EMISIÓN DE TOAST DE ERROR
-            sharedViewModel.emitWriteStatus("ERROR NDEF Formato: Fallo I/O. Recurriendo a NfcV.")
+            // ERROR TOAST EMISSION
+            sharedViewModel.emitWriteStatus("NDEF Format ERROR: I/O failure. Resorting to NfcV.")
             return false
         } finally {
             if (ndefFormatable.isConnected) {
@@ -442,123 +444,123 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
 
 
     /**
-     * **Primer Scan (Estándar):** Escribe el comando como un mensaje NDEF (application/x-cmd).
-     * Ahora maneja comandos de 1 byte y el comando de ESCRITURA (0x04) con payload de 96 bytes.
-     * (Solo se usa si Ndef está disponible)
+     * **First Scan (Standard):** Writes the command as an NDEF message (application/x-cmd).
+     * Now handles 1-byte commands and the WRITE command (0x04) with a 96-byte payload.
+     * (Only used if Ndef is available)
      */
     private fun executeNdefWriteCommand(ndef: Ndef, commandId: Byte): Boolean {
-        // --- PREPARACIÓN DEL PAYLOAD NDEF (Utilizando la función helper) ---
+        // --- NDEF PAYLOAD PREPARATION (Using the helper function) ---
         val fullPayload = createNdefCommandPayload(commandId)
         if (fullPayload == null) {
-            // El helper ya emitió el Toast/UI Message de error de datos faltantes.
+            // The helper has already emitted the Toast/UI Message of missing data error.
             return false
         }
 
         val logMessage = if (commandId == CMD_WRITE_CONFIG) {
-            "Escribiendo comando 0x${commandId.toHexString()} con 96 bytes de configuración..."
+            "Writing command 0x${commandId.toHexString()} with 96 bytes of configuration..."
         } else {
-            "Escribiendo comando 0x${commandId.toHexString()} (1 byte)..."
+            "Writing command 0x${commandId.toHexString()} (1 byte)..."
         }
 
         val commandRecord = NdefRecord.createMime(MIME_COMMAND_TYPE, fullPayload)
         val message = NdefMessage(commandRecord)
 
         lifecycleScope.launch {
-            LogManager.log("Primer Scan: $logMessage")
+            LogManager.log("First Scan: $logMessage")
         }
 
-        // --- LÓGICA DE ESCRITURA CON MANEJO ROBUSTO DE ERRORES ---
+        // --- WRITE LOGIC WITH ROBUST ERROR HANDLING ---
         try {
-            // 2. Intentar la conexión
+            // 2. Try to connect
             if (!ndef.isConnected) ndef.connect()
 
-            // 3. Realizar verificaciones previas a la escritura
+            // 3. Perform pre-write checks
             if (!ndef.isWritable) {
-                val errorMsg = "ERROR: TAG NDEF no es escribible. Verifique el bloqueo del TAG."
+                val errorMsg = "ERROR: NDEF TAG is not writable. Check the TAG's lock."
                 lifecycleScope.launch { LogManager.log(errorMsg) }
                 sharedViewModel.setUiMessage(errorMsg)
-                // EMISIÓN DE TOAST DE ERROR DE BLOQUEO
-                sharedViewModel.emitWriteStatus("ERROR: El TAG está bloqueado. No se puede escribir el comando.")
+                // LOCK ERROR TOAST EMISSION
+                sharedViewModel.emitWriteStatus("ERROR: The TAG is locked. The command cannot be written.")
                 return false
             }
-            // CRÍTICO: Comprobación de tamaño para el mensaje de 97 bytes
+            // CRITICAL: Size check for the 97-byte message
             if (ndef.maxSize < message.toByteArray().size) {
-                val errorMsg = "ERROR: Mensaje de comando (${message.toByteArray().size} B) es demasiado grande para el TAG (Max ${ndef.maxSize} B)."
+                val errorMsg = "ERROR: Command message (${message.toByteArray().size} B) is too large for the TAG (Max ${ndef.maxSize} B)."
                 lifecycleScope.launch { LogManager.log(errorMsg) }
                 sharedViewModel.setUiMessage(errorMsg)
-                // EMISIÓN DE TOAST DE ERROR DE TAMAÑO
-                sharedViewModel.emitWriteStatus("ERROR: El mensaje es demasiado grande para el TAG.")
+                // SIZE ERROR TOAST EMISSION
+                sharedViewModel.emitWriteStatus("ERROR: The message is too large for the TAG.")
                 return false
             }
 
-            // 4. Realizar la operación de escritura
+            // 4. Perform the write operation
             ndef.writeNdefMessage(message)
 
-            // 5. Éxito
-            sharedViewModel.setUiMessage("Primer Scan OK: $logMessage enviado. ¡Acerque el TAG nuevamente para el Segundo Scan (Leer Respuesta)!")
-            // EMISIÓN DE TOAST DE ÉXITO ESTÁNDAR
-            sharedViewModel.emitWriteStatus("Escritura NDEF OK. Comando 0x${commandId.toHexString()} enviado. Listo para Escaneo 2.")
+            // 5. Success
+            sharedViewModel.setUiMessage("First Scan OK: $logMessage sent. Bring the TAG close again for the Second Scan (Read Response)!")
+            // STANDARD SUCCESS TOAST EMISSION
+            sharedViewModel.emitWriteStatus("NDEF Write OK. Command 0x${commandId.toHexString()} sent. Ready for Scan 2.")
 
-            // Limpiar el comando de inmediato para evitar el doble escaneo/Toast
+            // Clear the command immediately to avoid double scanning/Toast
             sharedViewModel.clearCommand()
 
-            // Si la escritura es exitosa, limpiar los datos de escritura.
+            // If the write is successful, clear the write data.
             if (commandId == CMD_WRITE_CONFIG) {
                 sharedViewModel.setConfigDataToWrite(null)
             }
             return true
 
-            // --- BLOQUE CATCH PARA PROBLEMAS DE CONEXIÓN O SEGURIDAD ---
+            // --- CATCH BLOCK FOR CONNECTION OR SECURITY PROBLEMS ---
         } catch (e: SecurityException) {
             // Catch: java.lang.SecurityException: Tag is out of date.
-            val errorMsg = "Error de Seguridad (TAG Perdido): El TAG se ha movido o desconectado. Acerque el TAG de nuevo para reintentar."
+            val errorMsg = "Security Error (TAG Lost): The TAG has moved or disconnected. Bring the TAG close again to retry."
             lifecycleScope.launch { LogManager.log("NFC_WRITE SecurityException (Stale Tag): ${e.message}") }
             sharedViewModel.setUiMessage(errorMsg)
-            // EMISIÓN DE TOAST DE ERROR DE CONEXIÓN
-            sharedViewModel.emitWriteStatus("ERROR NDEF I/O: Conexión perdida. Reintente.")
+            // CONNECTION ERROR TOAST EMISSION
+            sharedViewModel.emitWriteStatus("NDEF I/O ERROR: Connection lost. Retry.")
             return false
 
         } catch (e: IOException) {
-            // Catch: Lanzado por connect(), writeNdefMessage(), o cualquier otra llamada de tecnología
-            val errorMsg = "Error de Conexión (I/O): El TAG se movió o falló la comunicación durante la operación. Acerque el TAG de nuevo para reintentar."
+            // Catch: Thrown by connect(), writeNdefMessage(), or any other technology call
+            val errorMsg = "Connection Error (I/O): The TAG moved or communication failed during the operation. Bring the TAG close again to retry."
             lifecycleScope.launch { LogManager.log("NFC_WRITE IOException (Connection Lost): ${e.message}") }
             sharedViewModel.setUiMessage(errorMsg)
-            // EMISIÓN DE TOAST DE ERROR DE CONEXIÓN
-            sharedViewModel.emitWriteStatus("ERROR NDEF I/O: Conexión perdida. Reintente.")
+            // CONNECTION ERROR TOAST EMISSION
+            sharedViewModel.emitWriteStatus("NDEF I/O ERROR: Connection lost. Retry.")
             return false
 
         } catch (e: Exception) {
-            // Catch cualquier otra excepción inesperada
-            val errorMsg = "Error Inesperado: Ocurrió un error inesperado durante la escritura NDEF: ${e.message}"
+            // Catch any other unexpected exception
+            val errorMsg = "Unexpected Error: An unexpected error occurred during NDEF write: ${e.message}"
             lifecycleScope.launch { LogManager.log("NFC_WRITE Unexpected error: ${e.message}") }
             sharedViewModel.setUiMessage(errorMsg)
-            // EMISIÓN DE TOAST DE ERROR INESPERADO
-            sharedViewModel.emitWriteStatus("ERROR Inesperado: Fallo de escritura NDEF.")
+            // UNEXPECTED ERROR TOAST EMISSION
+            sharedViewModel.emitWriteStatus("Unexpected Error: NDEF write failure.")
             return false
 
         } finally {
-            // 6. Siempre cerrar la conexión
+            // 6. Always close the connection
             try {
                 if (ndef.isConnected) {
                     ndef.close()
                 }
             } catch (closeE: Exception) {
-                // Ignorar errores durante el cierre, ya que la operación principal ya terminó o falló.
-                lifecycleScope.launch { LogManager.log("Advertencia: Error al cerrar la conexión Ndef: ${closeE.message}") }
+                // Ignore errors during closing, as the main operation has already finished or failed.
+                lifecycleScope.launch { LogManager.log("Warning: Error closing Ndef connection: ${closeE.message}") }
             }
         }
     }
 
     /**
-     * **Segundo Scan:** Lee el mensaje NDEF y busca la respuesta (application/x-data).
+     * **Second Scan:** Reads the NDEF message and looks for the response (application/x-data).
      */
     private fun executeNdefReadResponse(ndef: Ndef) {
-        lifecycleScope.launch { LogManager.log("Segundo Scan: Intentando leer respuesta NDEF (application/x-data)...") }
+        lifecycleScope.launch { LogManager.log("Second Scan: Trying to read NDEF response (application/x-data)...") }
 
         try {
             val ndefMessage = ndef.getNdefMessage()
             if (ndefMessage == null) {
-                sharedViewModel.setUiMessage("Segundo Scan: NDEF vacío o no formateado. ¿El TAG procesó el comando?")
+                sharedViewModel.setUiMessage("Second Scan: Empty or unformatted NDEF. Did the TAG process the command?")
                 return
             }
 
@@ -574,19 +576,19 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
                             val data = payload.copyOfRange(1, payload.size)
 
                             lifecycleScope.launch {
-                                LogManager.log("Segundo Scan OK: Respuesta de 0x${originalCommandId.toHexString()} (Payload size: ${data.size} bytes)")
+                                LogManager.log("Second Scan OK: Response from 0x${originalCommandId.toHexString()} (Payload size: ${data.size} bytes)")
                             }
 
-                            // El ViewModel distribuirá y emitirá el Toast de éxito (0x81, 0x84, etc.)
+                            // The ViewModel will distribute and emit the success Toast (0x81, 0x84, etc.)
                             sharedViewModel.distributeResponseData(originalCommandId, data)
-                            sharedViewModel.setUiMessage("Segundo Scan OK: Datos de 0x${originalCommandId.toHexString()} recibidos. Listo para nuevo comando.")
+                            sharedViewModel.setUiMessage("Second Scan OK: Data from 0x${originalCommandId.toHexString()} received. Ready for new command.")
                             responseFound = true
                             break
                         }
                     } else if (recordType == MIME_COMMAND_TYPE) {
-                        sharedViewModel.setUiMessage("Segundo Scan: Error de sincronización. El TAG aún contiene el COMANDO (0x${record.payload[0].toHexString()}) y no la RESPUESTA. Vuelva a escanear en unos segundos.")
-                        // EMISIÓN DE TOAST DE ERROR DE SINCRONIZACIÓN
-                        sharedViewModel.emitWriteStatus("ERROR SINCRO: TAG aún tiene el comando. Escanee de nuevo en 2s.")
+                        sharedViewModel.setUiMessage("Second Scan: Synchronization error. The TAG still contains the COMMAND (0x${record.payload[0].toHexString()}) and not the RESPONSE. Rescan in a few seconds.")
+                        // SYNCHRONIZATION ERROR TOAST EMISSION
+                        sharedViewModel.emitWriteStatus("SYNC ERROR: TAG still has the command. Scan again in 2s.")
                         responseFound = true
                         break
                     }
@@ -594,29 +596,29 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
             }
 
             if (!responseFound) {
-                sharedViewModel.setUiMessage("Segundo Scan: Mensaje NDEF encontrado, pero no se halló el registro de RESPUESTA ($MIME_RESPONSE_TYPE).")
-                // EMISIÓN DE TOAST DE ERROR DE RESPUESTA
-                sharedViewModel.emitWriteStatus("ERROR NDEF: Registro de Respuesta no encontrado.")
+                sharedViewModel.setUiMessage("Second Scan: NDEF message found, but the RESPONSE record ($MIME_RESPONSE_TYPE) was not found.")
+                // RESPONSE ERROR TOAST EMISSION
+                sharedViewModel.emitWriteStatus("NDEF ERROR: Response Record not found.")
             }
 
         } catch (e: Exception) {
-            val errorMsg = "Error NDEF al leer (Lógica): ${e.message}"
+            val errorMsg = "NDEF error when reading (Logic): ${e.message}"
             lifecycleScope.launch { LogManager.log(errorMsg) }
             sharedViewModel.setUiMessage(errorMsg)
-            // EMISIÓN DE TOAST DE ERROR INESPERADO
-            sharedViewModel.emitWriteStatus("ERROR INESPERADO al leer respuesta NDEF.")
+            // UNEXPECTED ERROR TOAST EMISSION
+            sharedViewModel.emitWriteStatus("UNEXPECTED ERROR when reading NDEF response.")
         }
     }
 }
 
 // --------------------------------------------------------------------------
-// Funciones de utilidad
+// Utility functions
 // --------------------------------------------------------------------------
 
-/** Función de utilidad para convertir ByteArray a String Hexadecimal */
+/** Utility function to convert ByteArray to Hexadecimal String */
 fun ByteArray.toHexString() = joinToString(separator = " ") {
     String.format("%02X", it)
 }
 
-/** Función de utilidad para convertir un Byte a String Hexadecimal de dos dígitos. */
+/** Utility function to convert a Byte to a two-digit Hexadecimal String. */
 fun Byte.toHexString() = String.format("%02X", this)
