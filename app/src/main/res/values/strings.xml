@@ -1,13 +1,17 @@
 <resources>
     <!-- Cadenas de la aplicación (proporcionadas originalmente) -->
-    <string name="app_name">NFC_Reader_01</string>
-    <string name="title_home">Home</string>
-    <string name="title_dashboard">Dashboard</string>
-    <string name="title_configuration">Configuration</string>
-    <string name="title_notifications">Notifications</string>
-    <string name="nfc_status_placeholder">Estatus de NFC</string>
-    <string name="nfc_characteristics_placeholder">Características de la etiqueta:</string>
-    <string name="nfc_data_placeholder">Contenido de los registros:</string>
+    <string name="app_name">Lector_NFC</string>
+    <string name="title_home">Inicio</string>
+    <string name="title_dashboard">Pizarra</string>
+    <string name="title_configuration">Configuración</string>
+    <string name="title_calibration">Calibración</string>
+    <string name="title_notifications">Notificaciones</string>
+    <string name="nfc_status_placeholder">Estados NFC</string>
+    <string name="nfc_characteristics_placeholder">Características Etiqueta:</string>
+    <string name="nfc_data_placeholder">Contenido Registros:</string>
+
+    <!-- Versión de la App -->
+    <string name="app_version_rev">Rev.8.01.11</string>
 
     <!-- Título de la pantalla Dashboard -->
     <string name="title_nfc_data">Datos de la Etiqueta NFC</string>
@@ -41,7 +45,7 @@
     <string name="hint_time_sec">Time [sec]</string>
     <string name="hint_chip_temperature">Chip Temperature</string>
     <string name="hint_lux">Lux</string>
-    <string name="hint_rak_frame_counter">Contador tramas RAK</string>
+    <string name="hint_rak_frame_counter">RAK Frame Counter</string>
     <string name="hint_nfc_message">NFC Message</string>
 
     <!-- Botones de Solicitud (Texto del botón) -->
@@ -50,3 +54,4 @@
     <string name="button_update_config">Configuracion</string>
     <string name="button_update_engineering">Ingenieria</string>
 </resources>
+

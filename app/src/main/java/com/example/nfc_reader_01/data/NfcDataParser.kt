@@ -4,6 +4,7 @@ import android.nfc.NdefMessage
 import android.nfc.NdefRecord
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -128,6 +129,38 @@ data class NdefRecordsData(
 
 object NfcDataParser {
 
+    /**
+     * CONFIGURACIÓN POR DEFECTO: Usada cuando se carga un archivo o se necesita
+     * un objeto base completo de 96 bytes para escribir, pero no hay un objeto leído.
+     * TODOS los campos deben estar definidos (23 floats + 1 Int).
+     */
+    val DEFAULT_CONFIG_DATA = ConfigurationData(
+        kMeter = 0.0f,
+        lowTempUnscaled = 0.0f,
+        highTempUnscaled = 0.0f,
+        lowTempCorrected = 0.0f,
+        highTempCorrected = 0.0f,
+        fcQ1_flow = 0.0f,
+        fcQ1_error = 0.0f,
+        fcQ1_temperature = 0.0f,
+        fcQ2_flow = 0.0f,
+        fcQ2_error = 0.0f,
+        fcQ2_temperature = 0.0f,
+        fcQ0_35_flow = 0.0f,
+        fcQ0_35_error = 0.0f,
+        fcQ0_35_temperature = 0.0f,
+        fcQ1_00_flow = 0.0f,
+        fcQ1_00_error = 0.0f,
+        fcQ1_00_temperature = 0.0f,
+        fcQ10_00_flow = 0.0f,
+        fcQ10_00_error = 0.0f,
+        fcQ10_00_temperature = 0.0f,
+        fcQ3_flow = 0.0f,
+        fcQ3_error = 0.0f,
+        fcQ3_temperature = 0.0f,
+        lastConfigurationDate = 0, // Timestamp Unix 0 (1 de enero de 1970)
+    )
+
     // --- Definición de Comandos (App -> TAG) y Tipos MIME ---
     private val COMMAND_ID_DATA: Byte = 0x01.toByte()
     private val COMMAND_PROCESS_DATA: Byte = 0x02.toByte()
@@ -139,6 +172,30 @@ object NfcDataParser {
     private val MIME_TYPE_COMMAND = "application/x-cmd"
     private val MIME_TYPE_DATA = "application/x-data"
 
+
+
+    /**
+     * Lee un Short (2 bytes) de la ByteArray en formato LITTLE-ENDIAN (LE).
+     */
+    private fun ByteArray.getShortLittleEndian(offset: Int): Int {
+        if (offset + 1 >= size) throw IndexOutOfBoundsException("Índice fuera de límites para Short en offset $offset")
+        // Byte 0 (Least Significant) + Byte 1 (Most Significant) * 256
+        return (this[offset].toInt() and 0xFF) or
+                (this[offset + 1].toInt() shl 8)
+    }
+
+    /**
+     * Lee un Int (4 bytes) de la ByteArray en formato LITTLE-ENDIAN (LE).
+     * Esta es la función CLAVE para arreglar la lectura de los bits del Float.
+     */
+    private fun ByteArray.getIntLittleEndian(offset: Int): Int {
+        if (offset + 3 >= size) throw IndexOutOfBoundsException("Índice fuera de límites para Int en offset $offset")
+        // Byte 0 (LSB) + Byte 1 + Byte 2 + Byte 3 (MSB)
+        return (this[offset].toInt() and 0xFF) or       // Byte 0
+                ((this[offset + 1].toInt() and 0xFF) shl 8) or  // Byte 1
+                ((this[offset + 2].toInt() and 0xFF) shl 16) or // Byte 2
+                ((this[offset + 3].toInt() and 0xFF) shl 24)    // Byte 3
+    }
 
     // -----------------------------------------------------------------------
     // --- PARSING DE RESPUESTAS (0x81, 0x82, 0x83) ---

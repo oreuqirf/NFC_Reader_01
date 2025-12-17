@@ -24,6 +24,12 @@
         tools:layout="@layout/fragment_configuration" />
 
     <fragment
+        android:id="@+id/navigation_calibration"
+        android:name="com.example.nfc_reader_01.ui.calibration.CalibrationFragment"
+        android:label="@string/title_calibration"
+        tools:layout="@layout/fragment_calibration" />
+
+    <fragment
         android:id="@+id/navigation_notifications"
         android:name="com.example.nfc_reader_01.ui.notifications.NotificationsFragment"
         android:label="@string/title_notifications"

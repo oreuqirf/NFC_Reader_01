@@ -1,27 +1,53 @@
 package com.example.nfc_reader_01
 
 /**
- * Interfaz que permite a los Fragmentos solicitar acciones a la MainActivity.
- * La MainActivity debe implementar esta interfaz para manejar las interacciones NFC.
+ * Interfaz para comunicar eventos desde los Fragmentos hacia la Activity principal (MainActivity),
+ * quien gestiona la lógica de NFC.
  */
 interface NfcInteractionListener {
+
     /**
-     * Solicita a la MainActivity que navegue al fragmento Dashboard.
-     * Utilizado después de un escaneo exitoso o una acción de importancia.
+     * Navega al fragmento Dashboard para mostrar el progreso o resultados.
      */
     fun navigateToDashboard()
 
     /**
-     * Solicita al ViewModel que establezca un nuevo comando para el próximo ciclo
-     * de lectura/escritura (ej. 0x02 para leer datos de proceso).
-     *
-     * @param commandId El byte del comando a solicitar.
+     * Solicita a la Activity que prepare el siguiente comando NFC simple (lectura, reset, o comandos de control sin payload).
+     * @param commandId El byte del comando a ejecutar (ej: 0x01, 0x02, 0x0A, 0x10, 0x11, etc.)
      */
     fun requestNextCommand(commandId: Byte)
 
     /**
-     * Solicita al ViewModel que prepare y ejecute el mensaje de escritura de configuración (0x05)
-     * en el próximo escaneo del TAG.
+     * Solicita a la Activity que prepare la escritura de la configuración completa (96 bytes).
+     * Los datos deben haber sido seteados previamente en el ViewModel.
+     * Comando asociado: 0x04.
      */
     fun requestWriteConfig()
+
+    /**
+     * Solicita a la Activity que prepare el seteo del volumen (4 bytes).
+     * Los datos (el nuevo volumen Float) deben haber sido seteados previamente en el ViewModel.
+     * Comando asociado: 0x14.
+     */
+    fun requestSetVolume()
+
+    /**
+     * Solicita a la Activity que inicie el proceso de lectura del equipo patrón.
+     * Utiliza el comando de lectura de ingeniería (0x05) o proceso (0x02) según la configuración.
+     */
+    fun requestReadMaster()
+
+    /**
+     * Solicita a la Activity que prepare la escritura del valor de calibración (5 bytes: 1 tipo + 4 float).
+     * Los datos deben haber sido seteados previamente en el ViewModel.
+     * Comando asociado: 0x13.
+     */
+    fun requestCalibrationWrite()
+
+    /**
+     * Solicita a la Activity que envíe el comando para ingresar al Modo Ingeniería.
+     * Comando asociado: 0x15.
+     */
+    fun requestEnterEngineeringMode()
 }
+

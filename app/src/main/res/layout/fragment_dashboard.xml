@@ -320,6 +320,7 @@
                     android:focusable="false"/>
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- NUEVO CAMPO: RAK Frame Counter -->
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -339,13 +340,14 @@
                 android:layout_marginBottom="16dp"
                 android:background="?android:attr/listDivider"/>
 
+            <!-- CAMPO DE ESTADO NFC: Este es el campo faltante que causaba el error -->
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
                 android:hint="@string/hint_nfc_message">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_message"
+                    android:id="@+id/text_message"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:focusable="false"/>
@@ -359,7 +361,7 @@
                 android:background="?android:attr/listDivider"/>
 
 
-            <!-- Botones de solicitud de datos (Ancho completo e internacionalizados) -->
+            <!-- Botones de solicitud de datos -->
             <Button
                 android:id="@+id/requestIdentityButton"
                 android:layout_width="match_parent"
