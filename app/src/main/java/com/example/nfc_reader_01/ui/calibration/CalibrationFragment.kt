@@ -22,21 +22,31 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Locale
 import kotlin.ExperimentalStdlibApi
+import kotlin.math.abs
 
 /**
  * Fragmento dedicado a la funcionalidad de Calibración.
  * Permite leer un equipo patrón usando el comando de Ingeniería (0x05)
  * y transferir ese valor a otros equipos (0x13).
+ * Incluye selección automática del punto de calibración basada en 'lastTripFlow'.
  */
 @OptIn(ExperimentalStdlibApi::class)
 class CalibrationFragment : Fragment() {
 
     companion object {
         private const val TAG = "CalibrationFragment"
-        // El payload de ingeniería es de 44 bytes (11 Ints)
-        private const val ENGINEERING_PAYLOAD_SIZE = 44
-        // Comando para leer datos de ingeniería del patrón
+        // El payload de ingeniería es de 48 bytes (12 Ints)
+        private const val ENGINEERING_PAYLOAD_SIZE = 48
         private const val CMD_READ_ENGINEERING: Byte = 0x05
+
+        // Índices del Spinner (Deben coincidir con el orden en 'setupSpinner')
+        private const val IDX_TEMP = 0
+        private const val IDX_FLOW_10L = 1
+        private const val IDX_FLOW_1L = 2
+        private const val IDX_FLOW_035L = 3
+        private const val IDX_FLOW_Q2 = 4
+        private const val IDX_FLOW_Q1 = 5
+        private const val IDX_FLOW_Q3 = 6
     }
 
     private var _binding: FragmentCalibrationBinding? = null
@@ -73,13 +83,13 @@ class CalibrationFragment : Fragment() {
 
     private fun setupSpinner() {
         val calibrationOptions = listOf(
-            "0 - Temperatura",        // Índice 0
-            "1 - Caudal a 10 L/m",    // Índice 1 (Caudal)
-            "2 - Caudal a 1 L/m",     // Índice 2 (Caudal)
-            "3 - Caudal a 0,35 L/m",  // Índice 3 (Caudal)
-            "4 - Caudal a Q2",        // Índice 4 (Caudal)
-            "5 - Caudal a Q1",        // Índice 5 (Caudal)
-            "6 - Caudal a Q3"         // Índice 6 (Caudal)
+            "0 - Temperatura",        // IDX_TEMP
+            "1 - Caudal a 10 L/m (600 L/h)",    // IDX_FLOW_10L
+            "2 - Caudal a 1 L/m (60 L/h)",     // IDX_FLOW_1L
+            "3 - Caudal a 0,35 L/m (21 L/h)",  // IDX_FLOW_035L
+            "4 - Caudal Q2 (10 L/h)",        // IDX_FLOW_Q2
+            "5 - Caudal Q1 (6 L/h)",        // IDX_FLOW_Q1
+            "6 - Caudal Q3 (2500 L/h)"         // IDX_FLOW_Q3
         )
 
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, calibrationOptions)
@@ -87,42 +97,52 @@ class CalibrationFragment : Fragment() {
         binding.spinnerCalibrationType.adapter = adapter
     }
 
+
     private fun setupListeners() {
-        // 1. Botón LEER PATRÓN (Ahora usa comando de Ingeniería 0x05)
+        // 1. Botón LEER PATRÓN (Usa comando de Ingeniería 0x05 a través de requestReadMaster)
         binding.btnReadMaster.setOnClickListener {
-            Log.d(TAG, "Solicitando Lectura de Patrón (0x05 - Ingeniería)")
-            listener?.requestNextCommand(CMD_READ_ENGINEERING)
+            Log.d(TAG, "Solicitando Lectura de Patrón (0x05)")
+            listener?.requestReadMaster()
         }
 
-        // 2. Botón TRANSFERIR (ESCRIBIR)
+        // 2. Botón TRANSFERIR (ESCRIBIR 0x13)
         binding.btnStartCalibration.setOnClickListener {
-            val inputString = binding.editTextTempPatron.text.toString()
-            // Reemplazar coma por punto para asegurar conversión correcta
-            val cleanInput = inputString.replace(',', '.')
-            val floatValue = cleanInput.toFloatOrNull()
+            val volString = binding.editTextVolPatron.text.toString().replace(',', '.')
+            val tempString = binding.editTextTempPatron.text.toString().replace(',', '.')
 
-            if (floatValue != null) {
-                // Obtener el tipo de calibración seleccionado
+            val volValue = volString.toFloatOrNull()
+            val tempValue = tempString.toFloatOrNull()
+
+            if (volValue != null && tempValue != null) {
+                // Obtener el tipo de calibración seleccionado (Byte 0)
                 val calibrationTypeByte = binding.spinnerCalibrationType.selectedItemPosition.toByte()
 
-                // Construir payload de 5 bytes: [Tipo (1B)] + [Float (4B)]
-                val buffer = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN)
+                // Construir payload de 9 bytes:
+                // [Tipo (1B)] + [Volumen Float (4B)] + [Temperatura Float (4B)]
+                val buffer = ByteBuffer.allocate(9).order(ByteOrder.LITTLE_ENDIAN)
+
                 buffer.put(calibrationTypeByte)
-                buffer.putFloat(floatValue)
+                buffer.putFloat(volValue)  // Bytes 1-4
+                buffer.putFloat(tempValue) // Bytes 5-8
+
                 val payloadBytes = buffer.array()
 
-                // Guardar en ViewModel y solicitar escritura
+                // Guardar en ViewModel
                 sharedViewModel.setConfigDataToWrite(payloadBytes)
 
-                Log.d(TAG, "Solicitando Calibración (0x13). Tipo: $calibrationTypeByte, Valor: $floatValue")
+                // Solicitar escritura
+                Log.d(TAG, "Solicitando Calibración (0x13). Tipo: $calibrationTypeByte, Vol: $volValue, Temp: $tempValue")
                 listener?.requestCalibrationWrite()
 
-                Toast.makeText(context, "Valor listo. Acerque el equipo a calibrar.", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Listo para transferir. Acerque el equipo a calibrar.", Toast.LENGTH_LONG).show()
             } else {
-                binding.inputLayoutTempPatron.error = "Ingrese un número válido primero"
+                Toast.makeText(context, "Error: Ingrese valores numéricos válidos en ambos campos.", Toast.LENGTH_SHORT).show()
+                if (volValue == null) binding.inputLayoutVolPatron.error = "Inválido"
+                if (tempValue == null) binding.inputLayoutTempPatron.error = "Inválido"
             }
         }
     }
+
 
     private fun setupObservers() {
         // Observamos los datos de INGENIERÍA (Respuesta 0x85) del Equipo Patrón
@@ -131,48 +151,85 @@ class CalibrationFragment : Fragment() {
                 sharedViewModel.engineeringResponseData.collect { data ->
                     if (data != null && data.isNotEmpty()) {
 
-                        // Verificar tamaño y recortar padding
+                        // Verificar tamaño (48 bytes = 12 ints)
                         if (data.size >= ENGINEERING_PAYLOAD_SIZE) {
                             val usefulBytes = data.sliceArray(0 until ENGINEERING_PAYLOAD_SIZE)
 
                             try {
                                 val engineering = NfcDataParser.parseEngineeringData(usefulBytes)
 
-                                // --- LÓGICA DE SELECCIÓN AUTOMÁTICA (Desde Ingeniería) ---
-                                val selectedPosition = binding.spinnerCalibrationType.selectedItemPosition
-                                val valueToCopy: Float
-                                val label: String
+                                // --- EXTRACCIÓN DE DATOS DEL PATRÓN ---
 
-                                if (selectedPosition == 0) {
-                                    // Opción 0: Temperatura
-                                    // Usamos temperatureUncal de Ingeniería y dividimos por 10.0
-                                    valueToCopy = engineering.temperatureUncal.toFloat() / 10.0f
-                                    label = "Temperatura"
-                                } else {
-                                    // Opciones 1-6: Caudales
-                                    // Aquí usamos el VOLUMEN (volumeLiters) y dividimos por 1000.0
-                                    valueToCopy = engineering.volumeLiters.toFloat() / 1000.0f
-                                    label = "Volumen (L)"
-                                }
-                                // ---------------------------------------
+                                // 1. Volumen (Last Trip Flow): Escalado / 1000.0f (Litros)
+                                // Convertimos bits a float (o int a float directo si es valor numérico)
+                                // Asumiendo que es un valor numérico entero escalado:
+                                val rawLastTrip = engineering.lastTripFlow.toFloat() / 10.0f
 
-                                val formattedValue = String.format(Locale.US, "%.2f", valueToCopy)
-                                binding.editTextTempPatron.setText(formattedValue)
+                                val rawLastPartialVolume = engineering.volumeLiters.toFloat() / 1000.0f
+
+                                // 2. Temperatura (Temp Uncal): Escalado / 10.0f (°C)
+                                val rawTemp = engineering.temperatureUncal.toFloat() / 10.0f
+
+                                // --- SELECCIÓN AUTOMÁTICA SPINNER ---
+                                // Basada en el caudal/volumen leído para identificar el punto de calibración
+                                val autoIndex = determineCalibrationIndex(rawLastTrip)
+                                binding.spinnerCalibrationType.setSelection(autoIndex)
+
+                                // --- LLENAR CAMPOS DE TEXTO ---
+                                val formattedVol = String.format(Locale.US, "%.3f", rawLastPartialVolume)
+                                val formattedTemp = String.format(Locale.US, "%.2f", rawTemp)
+
+                                binding.editTextVolPatron.setText(formattedVol)
+                                binding.editTextTempPatron.setText(formattedTemp)
+
+                                // Limpiar errores
+                                binding.inputLayoutVolPatron.error = null
                                 binding.inputLayoutTempPatron.error = null
 
-                                Toast.makeText(context, "$label Patrón Leído (Ing): $formattedValue", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Patrón Leído:\nVol: $formattedVol L\nTemp: $formattedTemp °C", Toast.LENGTH_SHORT).show()
 
                             } catch (e: Exception) {
                                 Log.e(TAG, "Error al parsear patrón ingeniería: ${e.message}")
-                                Toast.makeText(context, "Error al leer datos de ingeniería.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Error al leer datos del patrón.", Toast.LENGTH_SHORT).show()
                             }
                         } else {
-                            // Si los datos están incompletos pero no vacíos
                             Log.e(TAG, "Error tamaño ingeniería: Recibidos ${data.size}, esperados $ENGINEERING_PAYLOAD_SIZE")
                         }
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Determina el índice del Spinner basándose en rangos explícitos (Min - Max).
+     * Los valores de caudal están en L/h.
+     */
+    private fun determineCalibrationIndex(flowValue: Float): Int {
+        return when {
+            // Rango para Temperatura (valores cercanos a 0 o negativos)
+            flowValue < 0.1f -> IDX_TEMP
+
+            // Q1 = 6 L/h (Rango: 4.0 - 8.0)
+            flowValue >= 4.0f && flowValue <= 8.0f -> IDX_FLOW_Q1
+
+            // Q2 = 10 L/h (Rango: 8.0 - 15.0)
+            flowValue > 8.0f && flowValue <= 15.0f -> IDX_FLOW_Q2
+
+            // 0.35 L/m = 21 L/h (Rango: 18.0 - 24.0)
+            flowValue >= 15.0f && flowValue <= 24.0f -> IDX_FLOW_035L
+
+            // 1 L/m = 60 L/h (Rango: 50.0 - 70.0)
+            flowValue >= 24.0f && flowValue <= 70.0f -> IDX_FLOW_1L
+
+            // 10 L/m = 600 L/h (Rango: 550.0 - 650.0)
+            flowValue >= 100.0f && flowValue <= 700.0f -> IDX_FLOW_10L
+
+            // Q3 = 2500 L/h (Rango: 2400.0 - 2600.0)
+            flowValue >= 800.0f && flowValue <= 2800.0f -> IDX_FLOW_Q3
+
+            // Si no cae en ningún rango conocido, por defecto Temperatura
+            else -> IDX_TEMP
         }
     }
 
@@ -186,4 +243,3 @@ class CalibrationFragment : Fragment() {
         _binding = null
     }
 }
-

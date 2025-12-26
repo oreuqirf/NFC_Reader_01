@@ -1,7 +1,6 @@
 package com.example.nfc_reader_01.data
 
 import android.nfc.NdefMessage
-import com.example.nfc_reader_01.toHexString
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 

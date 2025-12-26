@@ -4,7 +4,6 @@ import android.nfc.NdefMessage
 import android.nfc.NdefRecord
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -105,6 +104,7 @@ data class EngineeringData(
     val chipTemperature: Int,  // Temperatura interna
     val lux: Int,              // Luxs
     val rakFrameCounter: Int,  // RAK Frame Counter
+    val lastTripFlow: Int      // Nuevo: Ultimo Caudal (Last Trip Flow)
 )
 
 
@@ -172,30 +172,6 @@ object NfcDataParser {
     private val MIME_TYPE_COMMAND = "application/x-cmd"
     private val MIME_TYPE_DATA = "application/x-data"
 
-
-
-    /**
-     * Lee un Short (2 bytes) de la ByteArray en formato LITTLE-ENDIAN (LE).
-     */
-    private fun ByteArray.getShortLittleEndian(offset: Int): Int {
-        if (offset + 1 >= size) throw IndexOutOfBoundsException("Índice fuera de límites para Short en offset $offset")
-        // Byte 0 (Least Significant) + Byte 1 (Most Significant) * 256
-        return (this[offset].toInt() and 0xFF) or
-                (this[offset + 1].toInt() shl 8)
-    }
-
-    /**
-     * Lee un Int (4 bytes) de la ByteArray en formato LITTLE-ENDIAN (LE).
-     * Esta es la función CLAVE para arreglar la lectura de los bits del Float.
-     */
-    private fun ByteArray.getIntLittleEndian(offset: Int): Int {
-        if (offset + 3 >= size) throw IndexOutOfBoundsException("Índice fuera de límites para Int en offset $offset")
-        // Byte 0 (LSB) + Byte 1 + Byte 2 + Byte 3 (MSB)
-        return (this[offset].toInt() and 0xFF) or       // Byte 0
-                ((this[offset + 1].toInt() and 0xFF) shl 8) or  // Byte 1
-                ((this[offset + 2].toInt() and 0xFF) shl 16) or // Byte 2
-                ((this[offset + 3].toInt() and 0xFF) shl 24)    // Byte 3
-    }
 
     // -----------------------------------------------------------------------
     // --- PARSING DE RESPUESTAS (0x81, 0x82, 0x83) ---
@@ -285,7 +261,6 @@ object NfcDataParser {
 
         // 1. Device ID (4 bytes) -> Se lee como Int y se convierte a Long sin signo.
         val signedDeviceIdRaw = buffer.getInt()
-        // Usamos and 0xFFFFFFFFL para manejar correctamente el valor de 32 bits como un Long sin signo.
         val deviceIdRaw = signedDeviceIdRaw.toLong() and 0xFFFFFFFFL
 
         // 2. Firmware Version (4 bytes)
@@ -298,7 +273,7 @@ object NfcDataParser {
         // 3. Configuration Timestamp (4 bytes) -> Leído como Int
         val configTimestamp = buffer.getInt()
 
-        // Asumimos que el timestamp Unix es en segundos y lo convertimos a milisegundos para Date
+        // Asumimos que el timestamp Unix es en segundos
         val dateMillis = configTimestamp.toLong() * 1000
         val date = Date(dateMillis)
         val formatter = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault())
@@ -312,12 +287,13 @@ object NfcDataParser {
     }
 
     /**
-     * Convierte el ByteArray de 40 bytes (respuesta 0x85) en un objeto EngineeringData estructurado.
+     * Convierte el ByteArray de 48 bytes (respuesta 0x85) en un objeto EngineeringData estructurado.
      */
     fun parseEngineeringData(engineeringBytes: ByteArray): EngineeringData {
-        // El tamaño esperado es 44 bytes (11 Ints).
-        if (engineeringBytes.size != 44) {
-            throw IllegalArgumentException("El tamaño de datos de Ingenieria debe ser 44 bytes. Recibido: ${engineeringBytes.size}")
+        // CORRECCIÓN: El tamaño ahora es 48 bytes (12 Ints).
+        val expectedSize = 48
+        if (engineeringBytes.size != expectedSize) {
+            throw IllegalArgumentException("El tamaño de datos de Ingenieria debe ser $expectedSize bytes. Recibido: ${engineeringBytes.size}")
         }
 
         val buffer = ByteBuffer.wrap(engineeringBytes).order(ByteOrder.LITTLE_ENDIAN)
@@ -333,11 +309,10 @@ object NfcDataParser {
             time = buffer.getInt(),
             chipTemperature = buffer.getInt(),
             lux = buffer.getInt(),
-            rakFrameCounter = buffer.getInt()
+            rakFrameCounter = buffer.getInt(),
+            lastTripFlow = buffer.getInt() // Campo añadido
         )
     }
-
-
 
     // -----------------------------------------------------------------------
     // --- CREACIÓN DE COMANDOS (0x01, 0x02, 0x03, 0x04) ---

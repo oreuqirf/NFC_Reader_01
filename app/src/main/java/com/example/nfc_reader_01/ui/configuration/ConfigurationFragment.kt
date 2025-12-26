@@ -52,7 +52,8 @@ class ConfigurationFragment : Fragment() {
         const val COMMAND_NORMAL_MODE = 0x12.toByte()     // Modo Normal
         const val COMMAND_CALIBRATE_FLOW = 0x13.toByte()  // Calibración
         const val COMMAND_SET_VOLUME = 0x14.toByte()      // Setear Volumen
-        const val COMMAND_ENTER_ENGINEERING_MODE = 0x15.toByte() // NUEVO: Modo Ingeniería
+        const val COMMAND_ENTER_ENGINEERING_MODE = 0x15.toByte() // Modo Ingeniería
+        const val COMMAND_CLEAR_FLAGS = 0x16.toByte()     // NUEVO: Limpiar Banderas
 
         // Configuración de Datos
         const val CONFIG_BYTE_SIZE = 96
@@ -69,17 +70,14 @@ class ConfigurationFragment : Fragment() {
     // Almacena la última configuración leída para poder modificarla y guardarla (CRÍTICO)
     private var currentConfigData: ConfigurationData? = null
 
-    // Referencia al listener de la actividad (MainActivity)
     private var listener: NfcInteractionListener? = null
 
-    // --- Launcher para la selección de archivos (JSON/TXT) ---
+    // Launcher para selección de archivos
     private val fileLoaderLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
             readAndProcessConfigFile(it)
         }
     }
-
-    // --- Ciclo de vida para el Listener ---
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -95,22 +93,14 @@ class ConfigurationFragment : Fragment() {
         listener = null
     }
 
-    // --- Vistas y Lógica ---
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentConfigurationBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         binding.textViewLastConfigurationDate.setText("Sin datos de lectura")
-
         setupListeners()
         observeViewModel()
     }
@@ -119,7 +109,7 @@ class ConfigurationFragment : Fragment() {
      * Configura los listeners para TODOS los botones.
      */
     private fun setupListeners() {
-        // --- 1. GUARDAR CONFIGURACIÓN (Escribir 0x04) ---
+        // --- 1. GUARDAR CONFIGURACIÓN ---
         binding.saveConfigButton.setOnClickListener {
             val baseConfig = currentConfigData
             if (baseConfig == null) {
@@ -134,14 +124,12 @@ class ConfigurationFragment : Fragment() {
             }
 
             val configBytes = NfcDataParser.serializeConfigData(newConfigData)
-
             if (configBytes.size != CONFIG_BYTE_SIZE) {
                 Toast.makeText(requireContext(), "Error interno de serialización.", Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
 
             sharedNfcViewModel.setConfigDataToWrite(configBytes)
-
             listener?.requestWriteConfig() ?: run {
                 Toast.makeText(requireContext(), "Error: Activity no lista.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -151,13 +139,13 @@ class ConfigurationFragment : Fragment() {
             binding.textViewLastConfigurationDate.setText("PENDIENTE DE GUARDAR ($timestamp)")
         }
 
-        // --- 2. LEER CONFIGURACIÓN (0x03) ---
+        // --- 2. LEER CONFIGURACIÓN ---
         binding.readConfigButton.setOnClickListener {
             sharedNfcViewModel.setConfigDataToWrite(null)
             listener?.requestNextCommand(COMMAND_READ_CONFIG)
         }
 
-        // --- 3. RESTABLECER CONFIGURACIÓN DE FÁBRICA (0x0A) ---
+        // --- 3. RESTABLECER CONFIGURACIÓN DE FÁBRICA ---
         binding.factoryResetButton.setOnClickListener {
             sharedNfcViewModel.setConfigDataToWrite(null)
             listener?.requestNextCommand(COMMAND_FACTORY_RESET)
@@ -165,55 +153,51 @@ class ConfigurationFragment : Fragment() {
 
         // --- 4. CARGAR DESDE ARCHIVO ---
         binding.loadFromFileButton.setOnClickListener {
-            fileLoaderLauncher.launch("text/*") // Acepta JSON y TXT
+            fileLoaderLauncher.launch("text/*")
         }
 
         // --- 5. COMANDOS ESPECIALES DE CONTROL ---
 
-        // Apagado (0x10)
         binding.shutdownButton.setOnClickListener {
             sharedNfcViewModel.setConfigDataToWrite(null)
             listener?.requestNextCommand(COMMAND_SHUTDOWN)
         }
 
-        // Reset de Volumen (0x11)
         binding.resetDeviceButton.setOnClickListener {
             sharedNfcViewModel.setConfigDataToWrite(null)
             listener?.requestNextCommand(COMMAND_RESET_VOLUME)
         }
 
-        // Modo Normal (0x12)
         binding.normalModeButton.setOnClickListener {
             sharedNfcViewModel.setConfigDataToWrite(null)
             listener?.requestNextCommand(COMMAND_NORMAL_MODE)
         }
 
-        // Calibración (0x13) - Nota: Esto dispara el comando simple, si se requiere el flujo complejo ir a CalibrationFragment
         binding.calibrateFlowButton.setOnClickListener {
             sharedNfcViewModel.setConfigDataToWrite(null)
             listener?.requestNextCommand(COMMAND_CALIBRATE_FLOW)
         }
 
-        // Set Volumen (0x14) - Abre Diálogo
         binding.setVolumeButton.setOnClickListener {
             showSetVolumeDialog()
         }
 
-        // NUEVO: Modo Ingeniería (0x15)
         binding.enterEngineeringModeButton.setOnClickListener {
             sharedNfcViewModel.setConfigDataToWrite(null)
             listener?.requestEnterEngineeringMode()
         }
+
+        // NUEVO: Listener para Limpiar Banderas (0x16)
+        binding.clearFlagsButton.setOnClickListener {
+            sharedNfcViewModel.setConfigDataToWrite(null)
+            listener?.requestNextCommand(COMMAND_CLEAR_FLAGS)
+        }
     }
 
-    /**
-     * Muestra un diálogo para ingresar el nuevo volumen y prepara el comando 0x14.
-     */
     private fun showSetVolumeDialog() {
         val builder = AlertDialog.Builder(requireContext())
         builder.setTitle("Establecer Volumen (0x14)")
         builder.setMessage("Ingrese el nuevo valor de volumen (Float):")
-
         val input = EditText(requireContext())
         input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         builder.setView(input)
@@ -221,24 +205,17 @@ class ConfigurationFragment : Fragment() {
         builder.setPositiveButton("Aceptar") { _, _ ->
             val text = input.text.toString()
             val volumeValue = text.toFloatOrNull()
-
             if (volumeValue != null) {
-                // 1. Convertir el Float a 4 bytes (Little Endian)
                 val buffer = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN)
                 buffer.putFloat(volumeValue)
                 val volumeBytes = buffer.array()
-
-                // 2. Guardar bytes en ViewModel
                 sharedNfcViewModel.setConfigDataToWrite(volumeBytes)
-
-                // 3. Solicitar la acción
                 listener?.requestSetVolume()
             } else {
                 Toast.makeText(requireContext(), "Valor inválido. Ingrese un número decimal.", Toast.LENGTH_SHORT).show()
             }
         }
         builder.setNegativeButton("Cancelar") { dialog, _ -> dialog.cancel() }
-
         builder.show()
     }
 
@@ -269,7 +246,6 @@ class ConfigurationFragment : Fragment() {
             "highTempCorrected", "fcQ1_error", "fcQ2_error", "fcQ0_35_error",
             "fcQ1_00_error", "fcQ10_00_error", "fcQ3_error"
         )
-
         try {
             val json = JSONObject(content)
             for (key in requiredFields) {
@@ -289,9 +265,7 @@ class ConfigurationFragment : Fragment() {
         }
 
         if (!allValid) return
-
         var updatedConfig = currentConfigData ?: NfcDataParser.DEFAULT_CONFIG_DATA
-
         updatedConfig = updatedConfig.copy(
             kMeter = floatMap["kMeter"]!!,
             lowTempUnscaled = floatMap["lowTempUnscaled"]!!,
@@ -306,17 +280,14 @@ class ConfigurationFragment : Fragment() {
             fcQ3_error = floatMap["fcQ3_error"]!!,
             lastConfigurationDate = (System.currentTimeMillis() / 1000).toInt()
         )
-
         currentConfigData = updatedConfig
         displayConfigData(updatedConfig)
         Toast.makeText(requireContext(), "Configuración cargada desde archivo.", Toast.LENGTH_SHORT).show()
     }
 
-
     private fun updateConfigDataFromUI(baseConfig: ConfigurationData): ConfigurationData? {
         var updatedConfig = baseConfig
         var allValid = true
-
         val uiUpdates: List<Triple<TextInputEditText, Float, (Float) -> Unit>> = listOf(
             Triple(binding.editTextKMeter, baseConfig.kMeter) { v -> updatedConfig = updatedConfig.copy(kMeter = v) },
             Triple(binding.editTextTempRawLow, baseConfig.lowTempUnscaled) { v -> updatedConfig = updatedConfig.copy(lowTempUnscaled = v) },
@@ -330,7 +301,6 @@ class ConfigurationFragment : Fragment() {
             Triple(binding.editTextFcq10LmError, baseConfig.fcQ10_00_error) { v -> updatedConfig = updatedConfig.copy(fcQ10_00_error = v) },
             Triple(binding.editTextFcqQ3Error, baseConfig.fcQ3_error) { v -> updatedConfig = updatedConfig.copy(fcQ3_error = v) }
         )
-
         for ((field, _, updateAction) in uiUpdates) {
             val text = field.text?.toString()?.trim() ?: ""
             val floatValue = text.toFloatOrNull()
@@ -342,13 +312,11 @@ class ConfigurationFragment : Fragment() {
                 updateAction(floatValue)
             }
         }
-
         if (allValid) {
             updatedConfig = updatedConfig.copy(
                 lastConfigurationDate = (System.currentTimeMillis() / 1000).toInt()
             )
         }
-
         return if (allValid) updatedConfig else null
     }
 

@@ -320,6 +320,17 @@
                 android:textColor="@color/design_default_color_error"
                 app:strokeColor="@color/design_default_color_error" />
 
+            <!-- NUEVO: Botón Limpiar Banderas (0x16) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/clearFlagsButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="Limpiar Banderas (0x16)"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:textColor="?attr/colorPrimary"
+                app:strokeColor="?attr/colorPrimary" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/setVolumeButton"
                 android:layout_width="match_parent"
@@ -347,7 +358,6 @@
                 style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
                 android:backgroundTint="?attr/colorSecondary" />
 
-            <!-- NUEVO BOTÓN: MODO INGENIERÍA -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/enterEngineeringModeButton"
                 android:layout_width="match_parent"
@@ -361,4 +371,3 @@
         </LinearLayout>
     </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>
-

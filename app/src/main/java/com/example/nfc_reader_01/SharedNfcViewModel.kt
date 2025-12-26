@@ -1,10 +1,7 @@
 package com.example.nfc_reader_01
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.nfc_reader_01.utils.LogManager
-import com.example.nfc_reader_01.utils.SoundManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -12,12 +9,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-
-// Note: The 'toHexString()' extension function has been removed from here to avoid
-// overload conflicts, as it is defined in MainActivity.kt.
+import com.example.nfc_reader_01.utils.LogManager
+import java.nio.charset.StandardCharsets
 
 /**
- * Data class for a protocol log entry.
+ * Clase de datos para una entrada de registro de protocolo.
  */
 data class LogEntry(
     val message: String,
@@ -25,48 +21,44 @@ data class LogEntry(
 )
 
 /**
- * Shared ViewModel to handle NFC state, commands, and data responses
- * between the Activity (NFC) and the Fragments (UI).
- *
- * @param application The application instance.
+ * ViewModel compartido para manejar el estado NFC, los comandos y las respuestas de datos
+ * entre la Activity (NFC) y los Fragmentos (UI).
  */
-class SharedNfcViewModel(application: Application) : AndroidViewModel(application) {
+@OptIn(ExperimentalStdlibApi::class) // Habilita el uso de toHexString() de la librería estándar
+class SharedNfcViewModel : ViewModel() {
 
-    private val soundManager = SoundManager(application)
+    // --- Variables de Estado General (StateFlow - Emiten el último valor conocido) ---
 
-    // --- General State Variables (StateFlow - Emit the last known value) ---
-
-    // Stores information about the currently connected NFC tag.
+    // Almacena información sobre la etiqueta NFC actualmente conectada.
     private val _nfcTagInfo = MutableStateFlow<String?>(null)
     val nfcTagInfo: StateFlow<String?> = _nfcTagInfo.asStateFlow()
 
-    private val _uiMessage = MutableStateFlow("Waiting for NFC connection...")
+    private val _uiMessage = MutableStateFlow("Esperando conexión NFC...")
     val uiMessage: StateFlow<String> = _uiMessage.asStateFlow()
 
-    // --- SharedFlow for one-time events (Toast/SnackBar) ---
+    // --- SharedFlow para eventos de una sola vez (Toast/SnackBar) ---
     private val _writeStatus = MutableSharedFlow<String>(replay = 0)
-
     /**
-     * SharedFlow for one-time notifications (usually Toast or SnackBar)
-     * about the result of ANY operation (READ, WRITE, or RESET).
+     * SharedFlow para notificaciones puntuales (generalmente Toast o SnackBar)
+     * sobre el resultado de CUALQUIER operación (LECTURA, ESCRITURA o RESET).
      */
     val writeStatus: SharedFlow<String> = _writeStatus.asSharedFlow()
 
-    // --- PROTOCOL LOGGING ---
+    // --- LOGGING DE PROTOCOLO ---
     private val _protocolLog = MutableStateFlow<List<LogEntry>>(emptyList())
     val protocolLog: StateFlow<List<LogEntry>> = _protocolLog.asStateFlow()
 
-    // --- Commands and Data Responses (Flows) ---
+    // --- Comandos y Respuestas de Datos (Flujos) ---
 
-    // The pending command. The value should be null after execution.
+    // El comando pendiente. El valor debe ser null tras la ejecución.
     private val _pendingCommand = MutableStateFlow<Byte?>(null)
     val pendingCommand: StateFlow<Byte?> = _pendingCommand.asStateFlow()
 
-    // Configuration data to be written (for CMD_WRITE_CONFIG).
+    // Datos de configuración a escribir (para CMD_WRITE_CONFIG).
     private val _configDataToWrite = MutableStateFlow<ByteArray?>(null)
     val configDataToWrite: StateFlow<ByteArray?> = _configDataToWrite.asStateFlow()
 
-    // Flows for data responses from commands (SharedFlow - one-time events)
+    // Flujos para las respuestas de datos de los comandos (SharedFlow - eventos puntuales)
     private val _identityResponseData = MutableSharedFlow<ByteArray?>(replay = 0)
     val identityResponseData: SharedFlow<ByteArray?> = _identityResponseData.asSharedFlow()
 
@@ -77,13 +69,13 @@ class SharedNfcViewModel(application: Application) : AndroidViewModel(applicatio
     val engineeringResponseData: SharedFlow<ByteArray?> = _engineeringResponseData.asSharedFlow()
 
 
-    // Configuration Response (StateFlow because it is persistent data)
+    // Respuesta de Configuración (StateFlow porque es dato persistente)
     private val _configurationResponseData = MutableStateFlow<ByteArray?>(null)
     val configurationResponseData: StateFlow<ByteArray?> = _configurationResponseData.asStateFlow()
 
     /**
-     * Resets the Configuration response StateFlow to null to avoid
-     * re-processing of data.
+     * Resetea el StateFlow de la respuesta de Configuración a null para evitar
+     * el re-procesamiento de datos.
      */
     fun clearConfigurationResponseData() {
         _configurationResponseData.value = null
@@ -91,39 +83,39 @@ class SharedNfcViewModel(application: Application) : AndroidViewModel(applicatio
 
 
     /**
-     * Sets the NFC tag information (ID only).
+     * Establece la información de la etiqueta NFC (solo el ID).
      */
     fun setNfcTagInfo(info: String?) {
         _nfcTagInfo.value = info
     }
 
     /**
-     * Sets the feedback message for the UI.
+     * Establece el mensaje de feedback para la UI.
      */
     fun setUiMessage(message: String) {
         _uiMessage.value = message
     }
 
     /**
-     * Emits the write status through the SharedFlow.
-     * Now also used for successful read notifications.
+     * Emite el estado de escritura a través del SharedFlow.
+     * Ahora también usado para notificaciones de lectura exitosas.
      */
     fun emitWriteStatus(status: String) {
-        // SharedFlow requires a coroutine context to emit
+        // SharedFlow requiere un contexto de corrutina para emitir
         viewModelScope.launch {
             _writeStatus.emit(status)
         }
     }
 
     /**
-     * Function that simulates reading an NFC tag.
+     * Función que simula la lectura de una etiqueta NFC.
      */
     fun onNfcTagDetected(tagId: String) {
-        // We use viewModelScope to launch the coroutine and call the suspend function of the LogManager.
+        // Usamos viewModelScope para lanzar la corrutina y llamar a la función suspend del LogManager.
         viewModelScope.launch {
-            LogManager.log("NFC tag detected with ID: $tagId")
+            LogManager.log("Etiqueta NFC detectada con ID: $tagId")
 
-            // Processing logic...
+            // Lógica de procesamiento...
             processTag(tagId)
         }
     }
@@ -131,53 +123,23 @@ class SharedNfcViewModel(application: Application) : AndroidViewModel(applicatio
     private fun processTag(id: String) {
         viewModelScope.launch {
             if (id.isEmpty()) {
-                LogManager.log("ERROR: The detected tag did not contain valid data.")
+                LogManager.log("ERROR: La etiqueta detectada no contenía datos válidos.")
             } else {
-                LogManager.log("INFO: Starting data read protocol.")
-                // ... more NFC logic ...
+                LogManager.log("INFO: Iniciando protocolo de lectura de datos.")
+                // ... más lógica de NFC ...
             }
         }
     }
 
     /**
-     * Helper function to get the readable name of the command.
-     */
-    private fun getCommandName(code: Byte): String {
-        // Command codes (not response codes)
-        return when (code) {
-            0x01.toByte() -> "Read Identity"
-            0x02.toByte() -> "Read Process"
-            0x03.toByte() -> "Read Configuration"
-            0x04.toByte() -> "Write Configuration"
-            0x05.toByte() -> "Read Engineering"
-            0x0A.toByte() -> "Factory Reset"
-            else -> "Unknown Command"
-        }
-    }
-
-    /**
-     * Emits a command for the Activity to pick up and send via NFC.
-     *
-     * KEY MODIFICATION: Emits an immediate status message for the UI (Toast)
-     * to notify the user that the command has been initiated.
+     * Emite un comando para que la Activity lo recoja y lo envíe por NFC.
      */
     fun sendCommand(commandCode: Byte) {
-        val commandName = getCommandName(commandCode)
-
-        // 1. Immediate notification of the command being sent
-        // emitWriteStatus("COMMAND INITIATED: $commandName. Bring the TAG closer...")
-
-        // 2. Set the pending command
         _pendingCommand.value = commandCode
-
-        viewModelScope.launch {
-            // We use the globally available toHexString function (defined in MainActivity.kt)
-            LogManager.log("Command 0x${commandCode.toHexString()} ($commandName) sent to buffer.")
-        }
     }
 
     /**
-     * Clears the pending command and configuration data after execution.
+     * Limpia el comando pendiente y los datos de configuración después de su ejecución.
      */
     fun clearCommand() {
         _pendingCommand.value = null
@@ -185,7 +147,7 @@ class SharedNfcViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     /**
-     * Sets the binary configuration data to be written.
+     * Establece los datos de configuración binarios a escribir.
      */
     fun setConfigDataToWrite(data: ByteArray?) {
         _configDataToWrite.value = data
@@ -193,62 +155,58 @@ class SharedNfcViewModel(application: Application) : AndroidViewModel(applicatio
 
 
     /**
-     * Receives and distributes the binary response data based on the response code.
-     * * The first byte of the NDEF response payload (payload[0]) is the response code (0x8X).
+     * Recibe y distribuye los datos de respuesta binarios basándose en el código de respuesta.
+     * * El primer byte del payload de la respuesta NDEF (payload[0]) es el código de respuesta (0x8X).
      */
     fun distributeResponseData(responseCode: Byte, data: ByteArray) {
         viewModelScope.launch {
             when (responseCode) {
 
-                // --- HANDLING OF READ RESPONSES (Activates Toast) ---
+                // --- MANEJO DE RESPUESTAS DE LECTURA (Activa Toast) ---
 
-                // Command 0x01 (Identity) -> Response 0x81 (READ)
+                // Comando 0x01 (Identity) -> Respuesta 0x81 (READ)
                 0x81.toByte() -> {
-                    soundManager.playBeep()
                     _identityResponseData.emit(data)
-                    emitWriteStatus("Read Identity OK..")
+                    emitWriteStatus("LECTURA EXITOSA (0x81).")
                 }
-                // Command 0x02 (Process) -> Response 0x82 (READ)
+                // Comando 0x02 (Process) -> Respuesta 0x82 (READ)
                 0x82.toByte() -> {
-                    soundManager.playBeep()
                     _processResponseData.emit(data)
-                    emitWriteStatus("Read Process OK.")
+                    emitWriteStatus("LECTURA EXITOSA (0x82).")
                 }
-                // Command 0x05 (Engineering) -> Response 0x85 (READ)
+                // Comando 0x05 (Engineering) -> Respuesta 0x85 (READ)
                 0x85.toByte() -> {
-                    soundManager.playBeep()
                     _engineeringResponseData.emit(data)
-                    emitWriteStatus("Read Engineering OK")
+                    emitWriteStatus("LECTURA EXITOSA (0x85).")
                 }
-                // Command 0x03 (Read Config) -> Response 0x83 (READ)
+                // Comando 0x03 (Read Config) -> Respuesta 0x83 (READ)
                 0x83.toByte() -> {
-                    soundManager.playBeep()
                     _configurationResponseData.emit(data)
-                    emitWriteStatus("Read Configuration OK.")
+                    emitWriteStatus("LECTURA EXITOSA (0x83).")
                 }
 
-                // --- HANDLING OF WRITE/RESET RESPONSES (Activates Toast) ---
+                // --- MANEJO DE RESPUESTAS DE ESCRITURA/RESET (Activa Toast) ---
 
-                // Command 0x04 (Write Config) -> Response 0x84 (WRITE SUCCESS)
+                // Comando 0x04 (Write Config) -> Respuesta 0x84 (WRITE SUCCESS)
                 0x84.toByte() -> {
-                    emitWriteStatus("WRITE SUCCESSFUL (0x84).")
-                    LogManager.log("WRITE OK (0x84) on TAG.")
+                    emitWriteStatus("ESCRITURA EXITOSA (0x84).")
+                    LogManager.log("ESCRITURA OK (0x84) en TAG.")
                 }
-                // Command 0x0A (Factory Reset) -> Response 0x8A (RESET SUCCESS)
+                // Comando 0x0A (Factory Reset) -> Respuesta 0x8A (RESET SUCCESS)
                 0x8A.toByte() -> {
-                    emitWriteStatus("RESET SUCCESSFUL (0x8A).")
-                    LogManager.log("FACTORY RESET OK (0x8A) on TAG.")
+                    emitWriteStatus("RESET EXITOSO (0x8A).")
+                    LogManager.log("RESET DE FÁBRICA OK (0x8A) en TAG.")
                 }
 
-                // --- END OF WRITE HANDLING ---
+                // --- FIN MANEJO ESCRITURA ---
 
                 else -> {
-                    // For any other unexpected response code (protocol error)
-                    // We use the globally available toHexString function (defined in MainActivity.kt)
-                    val message = "PROTOCOL ERROR: Unknown response code: 0x${responseCode.toHexString()}"
+                    // Para cualquier otro código de respuesta no esperado (error de protocolo)
+                    // Usamos la función toHexString() nativa de la librería estándar
+                    val message = "ERROR DE PROTOCOLO: Código de respuesta desconocido: 0x${responseCode.toHexString()}"
                     LogManager.log(message)
                     setUiMessage(message)
-                    // A protocol error Toast is issued for the user to see.
+                    // Se emite un Toast de error de protocolo para que el usuario lo vea.
                     emitWriteStatus(message)
                 }
             }

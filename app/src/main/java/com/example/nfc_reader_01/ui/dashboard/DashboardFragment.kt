@@ -44,8 +44,9 @@ class DashboardFragment : Fragment() {
     private val IDENTITY_PAYLOAD_SIZE = 12 // 3 Ints (12 bytes)
     private val PROCESS_PAYLOAD_SIZE = 36  // 9 Ints (36 bytes)
 
-    // CORRECCIÓN: Actualizado a 44 bytes para incluir el rakFrameCounter (11 Ints * 4)
-    private val ENGINEERING_PAYLOAD_SIZE = 44
+    // CORRECCIÓN: Actualizado a 48 bytes (12 Ints * 4 bytes)
+    // Incluye: 10 campos originales + rakFrameCounter + lastTripFlow
+    private val ENGINEERING_PAYLOAD_SIZE = 48
     // --------------------------------------------------------------------------------------------------
 
     override fun onCreateView(
@@ -91,7 +92,6 @@ class DashboardFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 sharedViewModel.uiMessage.collect { message ->
                     try {
-                        // CORRECCIÓN: Usar setText() para asignar el String al TextInputEditText
                         binding.textMessage.setText(message)
                     } catch (e: Exception) {
                         Log.d(TAG, "Estado NFC: $message")
@@ -158,7 +158,7 @@ class DashboardFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 sharedViewModel.engineeringResponseData.collect { data ->
                     if (data != null && data.isNotEmpty()) {
-                        // Usamos el nuevo tamaño corregido (44 bytes)
+                        // Usamos el tamaño actualizado de 48 bytes
                         if (data.size >= ENGINEERING_PAYLOAD_SIZE) {
                             val usefulBytes = data.sliceArray(0 until ENGINEERING_PAYLOAD_SIZE)
                             parseEngineeringData(usefulBytes)
@@ -209,6 +209,7 @@ class DashboardFragment : Fragment() {
         try {
             val process = NfcDataParser.parseProcessData(data)
 
+            // Conversión Int -> Float con escalado (ej. miliunidades)
             val floatVolume = process.volume / 1000.0f
             val floatFlowRate = process.flowRate.toFloat()
             val floatTemperature = process.temperature.toFloat()
@@ -249,21 +250,25 @@ class DashboardFragment : Fragment() {
         try {
             val engineering = NfcDataParser.parseEngineeringData(data)
 
-            // CORRECCIÓN: Usar .toFloat() en lugar de Float.fromBits()
-            // Y aplicar factores de escala: Volumen / 1000, Temperatura / 10
+            // CORRECCIÓN: Usar .toFloat() y aplicar factores de escala
+            // Volumen: / 1000.0f
             val floatVolL = engineering.volumeLiters.toFloat() / 1000.0f
             val floatVolLU = engineering.volumeLitersUncal.toFloat() / 1000.0f
+            // Temperatura: / 10.0f
             val floatTempU = engineering.temperatureUncal.toFloat() / 10.0f
 
-            val floatFlowU = engineering.flowUncal.toFloat()
-            val floatTtof = engineering.ttof.toFloat()
-            val floatDtof = engineering.dtof.toFloat()
-            val floatStdDev = engineering.stdDev.toFloat()
-            val floatChipTemp = engineering.chipTemperature.toFloat()
+            val floatFlowU = engineering.flowUncal.toFloat() / 10.0f;
+            val floatTtof = engineering.ttof.toFloat() / 1000.0f
+            val floatDtof = engineering.dtof.toFloat() / 1000.0f
+            val floatStdDev = engineering.stdDev.toFloat() / 10.0f
+            val floatChipTemp = engineering.chipTemperature.toFloat() / 10.0f
             val floatLux = engineering.lux.toFloat()
 
-            binding.editTextVolumeLiters.setText(String.format(Locale.US, "%.3f L", floatVolL)) // Ajustado a 3 decimales
-            binding.editTextVolumeLitersUncal.setText(String.format(Locale.US, "%.3f L", floatVolLU)) // Ajustado a 3 decimales
+            // Nuevo campo: Último Caudal (Se asume en L/h, escalado por 10 )
+            val floatLastTripFlow = engineering.lastTripFlow.toFloat() / 10.0f
+
+            binding.editTextVolumeLiters.setText(String.format(Locale.US, "%.3f L", floatVolL)) // 3 decimales
+            binding.editTextVolumeLitersUncal.setText(String.format(Locale.US, "%.3f L", floatVolLU)) // 3 decimales
             binding.editTextTemperatureUncal.setText(String.format(Locale.US, "%.2f °C", floatTempU))
 
             binding.editTextFlowUncal.setText(String.format(Locale.US, "%.2f L/h", floatFlowU))
@@ -274,12 +279,11 @@ class DashboardFragment : Fragment() {
             binding.editTextChipTemperature.setText(String.format(Locale.US, "%.2f °C", floatChipTemp))
             binding.editTextLux.setText(String.format(Locale.US, "%.2f mV", floatLux))
 
-            // Nuevo campo
             binding.editTextRakFrameCounter.setText("${engineering.rakFrameCounter}")
+            binding.editTextLastTripFlow.setText(String.format(Locale.US, "%.3f L/h", floatLastTripFlow))
 
         } catch (e: Exception) {
             Log.e(TAG, "Error parseEngineeringData: ${e.message}")
-            // Muestra un error más descriptivo en la UI si falla el parseo por tamaño
             val msg = if (e is IllegalArgumentException) "Error Tamaño" else "Error Parseo"
             binding.editTextVolumeLiters.setText(msg)
         }
@@ -323,6 +327,7 @@ class DashboardFragment : Fragment() {
         binding.editTextChipTemperature.setText("")
         binding.editTextLux.setText("")
         binding.editTextRakFrameCounter.setText("")
+        binding.editTextLastTripFlow.setText("")
     }
 
     override fun onDestroyView() {
@@ -334,3 +339,4 @@ class DashboardFragment : Fragment() {
 // Extensiones útiles
 fun ByteArray.toHexString() = joinToString(separator = " ") { String.format("%02X", it) }
 fun Byte.toHexString() = String.format("%02X", this)
+

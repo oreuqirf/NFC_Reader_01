@@ -47,6 +47,7 @@
     <string name="hint_lux">Lux</string>
     <string name="hint_rak_frame_counter">RAK Frame Counter</string>
     <string name="hint_nfc_message">NFC Message</string>
+    <string name="hint_last_trip_flow">Último Caudal [L]</string>
 
     <!-- Botones de Solicitud (Texto del botón) -->
     <string name="button_update_identity">Identidad</string>

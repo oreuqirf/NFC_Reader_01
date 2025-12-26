@@ -10,14 +10,15 @@ android {
     // FIX FINAL: Actualizado a API 35 (o superior) para satisfacer a las dependencias.
     compileSdk = 35
 
+
     defaultConfig {
-        applicationId = "com.example.nfc_reader_01"
+        applicationId = "com.example.nfc_reader_01.only_shutdown"
         // CLAVE: minSdk se queda en 26 para mantener la compatibilidad con Android 8.0.
         minSdk = 26
         // ACTUALIZADO: targetSdk debe coincidir con compileSdk.
         targetSdk = 35
         versionCode = 1
-        versionName = "1.0"
+        versionName = "Rev.8.01.13"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
