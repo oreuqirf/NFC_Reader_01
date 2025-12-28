@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.configuration.ConfigurationFragment">
+
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Datos de Configuración (Editables):"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <!-- K_meter -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="K_meter (Factor)">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_k_meter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberSigned|numberDecimal" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:background="?android:attr/listDivider"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Corrección de Temperatura:"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <!-- temp_raw_low -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Temp Raw Low">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_temp_raw_low"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberSigned|numberDecimal" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- temp_raw_high -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Temp Raw High">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_temp_raw_high"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberSigned|numberDecimal" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- temp_cal_low -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Temp Cal Low">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_temp_cal_low"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberSigned|numberDecimal" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- temp_cal_high -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:hint="Temp Cal High">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_temp_cal_high"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberSigned|numberDecimal" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:background="?android:attr/listDivider"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Corrección de Caudal (Errores en %):"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <!-- FC Q1 -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="FC Q1 Error (%)">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_fcq_q1_error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberSigned|numberDecimal" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- FC Q2 -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="FC Q2 Error (%)">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_fcq_q2_error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberSigned|numberDecimal" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- FC 0.35 -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="FC 0.35 L/min Error (%)">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_fcq_0_35_error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberSigned|numberDecimal" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- FC 1.00 -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="FC 1.00 L/min Error (%)">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_fcq_1_00_error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberSigned|numberDecimal" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- FC 10.00 -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="FC 10.00 L/min Error (%)">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_fcq_10_lm_error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberSigned|numberDecimal" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- FC Q3 -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:hint="FC Q3 Error (%)">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_fcq_q3_error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberSigned|numberDecimal" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"
+                android:background="?android:attr/listDivider"/>
+
+            <!-- Last Configuration Date (Timestamp) - Read Only -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/text_input_layout_last_configuration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:hint="Última fecha de configuración">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/text_view_last_configuration_date"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"
+                    android:clickable="false"
+                    android:inputType="none"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    tools:text="15/05/2024 10:30:00" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"
+                android:background="?android:attr/listDivider"/>
+
+            <!-- BOTONES DE ACCIÓN PRINCIPAL -->
+
+            <!-- Botón de lectura (Secundario/Contorno) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/readConfigButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp"
+                android:text="Leer Configuración del TAG"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:textColor="?attr/colorPrimary"
+                app:strokeColor="?attr/colorPrimary" />
+
+            <!-- Botón de Guardar (Primario/Relleno) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/saveConfigButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="Guardar Configuración"
+                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                android:backgroundTint="?attr/colorPrimary"
+                android:textColor="@android:color/white" />
+
+            <!-- Botón de Restablecer (Acción Destructiva/Relleno Rojo) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/factoryResetButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="Restablecer Configuración de Fábrica"
+                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                android:backgroundTint="@color/design_default_color_error"
+                android:textColor="@android:color/white" />
+
+            <!-- Botón de Cargar Archivo (Auxiliar/Contorno Secundario) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/loadFromFileButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:text="Cargar Desde Archivo"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:textColor="?attr/colorSecondary"
+                app:strokeColor="?attr/colorSecondary" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"
+                android:background="?android:attr/listDivider"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="Comandos Especiales de Control:"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <!-- SECCIÓN: COMANDOS ESPECIALES -->
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/shutdownButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="Apagado del Equipo (0x10)"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:textColor="@color/design_default_color_error"
+                app:strokeColor="@color/design_default_color_error" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/resetDeviceButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="Reset de Volumen (0x11)"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:textColor="@color/design_default_color_error"
+                app:strokeColor="@color/design_default_color_error" />
+
+            <!-- NUEVO: Botón Limpiar Banderas (0x16) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/clearFlagsButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="Limpiar Banderas (0x16)"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:textColor="?attr/colorPrimary"
+                app:strokeColor="?attr/colorPrimary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/setVolumeButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="Set Volumen (0x14)"
+                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                android:backgroundTint="?attr/colorSecondary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/normalModeButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="Cambiar a Modo Normal (0x12)"
+                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                android:backgroundTint="?attr/colorSecondary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/calibrateFlowButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="Calibración en función del Caudal (0x13)"
+                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                android:backgroundTint="?attr/colorSecondary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/enterEngineeringModeButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="Ingresar al Modo Ingeniería (0x15)"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:textColor="#FF9800"
+                app:strokeColor="#FF9800" />
+
+        </LinearLayout>
+    </ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

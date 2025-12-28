@@ -1,0 +1,100 @@
+<resources>
+    <string name="app_name">MS206 标定</string>
+    <string name="app_version_rev">Rev.1.02</string>
+
+    <string name="title_home">首页</string>
+    <string name="title_dashboard">仪表盘</string>
+    <string name="title_configuration">配置</string>
+    <string name="title_calibration">标定</string>
+    <string name="title_notifications">通知</string>
+
+    <string name="nfc_status_placeholder">NFC 状态</string>
+    <string name="nfc_characteristics_placeholder">标签特性：</string>
+    <string name="nfc_data_placeholder">寄存器内容：</string>
+
+    <string name="title_nfc_data">NFC 标签数据</string>
+
+    <string name="hint_serial_number">序列号</string>
+    <string name="hint_firmware_version">固件版本</string>
+    <string name="hint_last_config_date">上次配置时间</string>
+
+    <string name="hint_volume_m3">累积量 [m³]</string>
+    <string name="hint_flow_l_h">瞬时流量 [L/h]</string>
+    <string name="hint_temperature_c">温度 [°C]</string>
+    <string name="hint_battery_percent">电池电量 [%]</string>
+    <string name="hint_status">状态</string>
+
+    <string name="hint_direct_flow_period">正向流量时长 [min]</string>
+    <string name="hint_reverse_flow_period">反向流量时长 [min]</string>
+    <string name="hint_no_flow_period">无流时长 [min]</string>
+    <string name="hint_leakage_period">泄漏时长 [min]</string>
+
+    <string name="hint_volume_l">累积量 [L]</string>
+    <string name="hint_volume_l_uncal">未标定累积量 [L]</string>
+    <string name="hint_temperature_c_uncal">未标定温度 [°C]</string>
+    <string name="hint_flow_l_h_uncal">未标定流量 [L/h]</string>
+    <string name="hint_ttof">TToF (绝对飞行时间)</string>
+    <string name="hint_dtof">DToF (飞行时间差)</string>
+    <string name="hint_std_dev">标准差 (StdDev)</string>
+    <string name="hint_time_sec">时间 [秒]</string>
+    <string name="hint_chip_temperature">芯片温度</string>
+    <string name="hint_lux">光照度 (Lux)</string>
+    <string name="hint_rak_frame_counter">RAK 帧计数器</string>
+    <string name="hint_last_trip_flow">最近一次行程流量</string>
+
+    <string name="hint_nfc_message">NFC 消息</string>
+
+    <string name="button_update_identity">更新身份信息</string>
+    <string name="button_update_process">更新过程数据</string>
+    <string name="button_update_config">更新配置</string>
+    <string name="button_update_engineering">更新工程数据</string>
+
+    <string name="title_calibration_simple">设备标定</string>
+    <string name="btn_read_pattern">读取标准器 (0x05)</string>
+    <string name="btn_transfer">传输数据 (0x13)</string>
+    <string name="hint_vol_detected">检测累积量 (L)</string>
+    <string name="hint_temp_detected">检测温度 (°C)</string>
+
+
+    <string name="instr_step_1">靠近标准器设备</string>
+    <string name="label_detected_point">检测点:</string>
+    <string name="text_placeholder_dash">---</string>
+    <string name="instr_step_2">靠近被测设备</string>
+    <string name="btn_cancel_read">取消 / 读取新标准器</string>
+
+    <string name="success_title">传输成功！</string>
+    <string name="success_desc">数据已保存到设备。</string>
+    <string name="btn_calibrate_next">标定下一台设备</string>
+
+
+    <string name="toast_transferring">传输中...</string>
+    <string name="toast_invalid_values">无效值</string>
+    <string name="toast_pattern_read_format">读取标准器: %1$s</string>
+    <string name="toast_error_reading">读取标准器错误。</string>
+
+    <string name="cal_type_temp_only">仅温度</string>
+    <string name="cal_type_flow_10l">流量 10 L/m (600 L/h)</string>
+    <string name="cal_type_flow_1l">流量 1 L/m (60 L/h)</string>
+    <string name="cal_type_flow_035l">流量 0.35 L/m (21 L/h)</string>
+    <string name="cal_type_flow_q2">流量 Q2 (10 L/h)</string>
+    <string name="cal_type_flow_q1">流量 Q1 (6 L/h)</string>
+    <string name="cal_type_flow_q3">流量 Q3 (2500 L/h)</string>
+    <string name="cal_type_unknown">未知 / 温度</string>
+
+    <string name="status_waiting_nfc">等待 NFC 连接...</string>
+    <string name="error_tag_empty">错误：标签为空或无数据。</string>
+    <string name="log_nfc_detected">检测到 NFC 标签。ID: %1$s</string>
+    <string name="log_init_read">正在启动读取协议...</string>
+
+    <string name="msg_read_success_identity">读取成功 (身份 0x81)。</string>
+    <string name="msg_read_success_process">读取成功 (过程 0x82)。</string>
+    <string name="msg_read_success_engineering">读取成功 (工程 0x85)。</string>
+    <string name="msg_read_success_config">读取成功 (配置 0x83)。</string>
+    <string name="msg_write_success">写入成功 (0x84)。</string>
+    <string name="msg_reset_success">恢复出厂设置成功 (0x8A)。</string>
+    <string name="msg_calibration_success">标定传输成功。</string>
+
+    <string name="error_protocol_unknown">协议错误：未知代码 0x%1$s</string>
+
+</resources>
+

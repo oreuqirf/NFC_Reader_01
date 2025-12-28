@@ -1,0 +1,101 @@
+<resources>
+    <string name="app_name">MS206 Calibration</string>
+    <string name="app_version_rev">Rev.1.02</string>
+
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_configuration">Configuration</string>
+    <string name="title_calibration">Calibration</string>
+    <string name="title_notifications">Notifications</string>
+
+    <string name="nfc_status_placeholder">NFC Status</string>
+    <string name="nfc_characteristics_placeholder">Tag characteristics:</string>
+    <string name="nfc_data_placeholder">Register content:</string>
+
+    <string name="title_nfc_data">NFC Tag Data</string>
+
+    <string name="hint_serial_number">Serial Number</string>
+    <string name="hint_firmware_version">Firmware Version</string>
+    <string name="hint_last_config_date">Last Configuration</string>
+
+    <string name="hint_volume_m3">Volume [m³]</string>
+    <string name="hint_flow_l_h">Flow Rate [L/h]</string>
+    <string name="hint_temperature_c">Temperature [°C]</string>
+    <string name="hint_battery_percent">Battery [%]</string>
+    <string name="hint_status">Status</string>
+
+    <string name="hint_direct_flow_period">Direct Flow Period [min]</string>
+    <string name="hint_reverse_flow_period">Reverse Flow Period [min]</string>
+    <string name="hint_no_flow_period">No Flow Period [min]</string>
+    <string name="hint_leakage_period">Leakage Period [min]</string>
+
+    <string name="hint_volume_l">Volume [L]</string>
+    <string name="hint_volume_l_uncal">Uncalibrated Volume [L]</string>
+    <string name="hint_temperature_c_uncal">Uncalibrated Temp [°C]</string>
+    <string name="hint_flow_l_h_uncal">Uncalibrated Flow [L/h]</string>
+    <string name="hint_ttof">TToF</string>
+    <string name="hint_dtof">DToF</string>
+    <string name="hint_std_dev">StdDev</string>
+    <string name="hint_time_sec">Time [sec]</string>
+    <string name="hint_chip_temperature">Chip Temperature</string>
+    <string name="hint_lux">Lux</string>
+    <string name="hint_rak_frame_counter">RAK Frame Counter</string>
+    <string name="hint_last_trip_flow">Last Trip Flow</string>
+
+    <string name="hint_nfc_message">NFC Message</string>
+
+    <string name="button_update_identity">Update Identity</string>
+    <string name="button_update_process">Update Process</string>
+    <string name="button_update_config">Update Configuration</string>
+    <string name="button_update_engineering">Update Engineering</string>
+
+    <string name="title_calibration_simple">Device Calibration</string>
+    <string name="btn_read_pattern">READ MASTER (0x05)</string>
+    <string name="btn_transfer">TRANSFER (0x13)</string>
+    <string name="hint_vol_detected">Detected Volume (L)</string>
+    <string name="hint_temp_detected">Detected Temperature (°C)</string>
+
+    <string name="instr_step_1">Bring near MASTER device</string>
+    <string name="label_detected_point">Detected Point:</string>
+    <string name="text_placeholder_dash">---</string>
+    <string name="instr_step_2">Bring near device UNDER TEST</string>
+    <string name="btn_cancel_read">Cancel / Read New Master</string>
+
+    <string name="success_title">Transfer Successful!</string>
+    <string name="success_desc">Data saved to device.</string>
+    <string name="btn_calibrate_next">Calibrate Next Device</string>
+
+
+    <string name="toast_transferring">Transferring...</string>
+    <string name="toast_invalid_values">Invalid values</string>
+    <string name="toast_pattern_read_format">Master Read: %1$s</string>
+    <string name="toast_error_reading">Error reading master.</string>
+
+    <string name="cal_type_temp_only">Temperature Only</string>
+    <string name="cal_type_flow_10l">Flow 10 L/m (600 L/h)</string>
+    <string name="cal_type_flow_1l">Flow 1 L/m (60 L/h)</string>
+    <string name="cal_type_flow_035l">Flow 0.35 L/m (21 L/h)</string>
+    <string name="cal_type_flow_q2">Flow Q2 (10 L/h)</string>
+    <string name="cal_type_flow_q1">Flow Q1 (6 L/h)</string>
+    <string name="cal_type_flow_q3">Flow Q3 (2500 L/h)</string>
+    <string name="cal_type_unknown">Unknown / Temp</string>
+
+
+    <string name="status_waiting_nfc">Waiting for NFC connection...</string>
+    <string name="error_tag_empty">Error: Empty tag or no data.</string>
+    <string name="log_nfc_detected">NFC Tag detected. ID: %1$s</string>
+    <string name="log_init_read">Starting read protocol...</string>
+
+    <string name="msg_read_success_identity">READ SUCCESS (Identity 0x81).</string>
+    <string name="msg_read_success_process">READ SUCCESS (Process 0x82).</string>
+    <string name="msg_read_success_engineering">READ SUCCESS (Engineering 0x85).</string>
+    <string name="msg_read_success_config">READ SUCCESS (Config 0x83).</string>
+    <string name="msg_write_success">WRITE SUCCESS (0x84).</string>
+    <string name="msg_reset_success">FACTORY RESET SUCCESS (0x8A).</string>
+    <string name="msg_calibration_success">CALIBRATION TRANSFER SUCCESSFUL.</string>
+
+    <string name="error_protocol_unknown">PROTOCOL ERROR: Unknown code 0x%1$s</string>
+
+
+</resources>
+
