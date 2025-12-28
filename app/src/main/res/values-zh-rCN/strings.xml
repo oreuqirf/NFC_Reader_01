@@ -1,6 +1,6 @@
 <resources>
-    <string name="app_name">MS206 标定</string>
-    <string name="app_version_rev">Rev.1.02</string>
+    <string name="app_name">MS206 关机工具</string>
+    <string name="app_version_rev">Rev.1.01</string>
 
     <string name="title_home">首页</string>
     <string name="title_dashboard">仪表盘</string>
@@ -95,6 +95,14 @@
     <string name="msg_calibration_success">标定传输成功。</string>
 
     <string name="error_protocol_unknown">协议错误：未知代码 0x%1$s</string>
+
+
+    <string name="shutdown_status_ready">准备关机</string>
+    <string name="shutdown_status_sending">正在发送命令...</string>
+    <string name="btn_execute_shutdown">执行关机</string>
+    <string name="toast_requesting_shutdown">正在请求关机...</string>
+
+    <string name="nav_title_shutdown">设备关机</string>
 
 </resources>
 

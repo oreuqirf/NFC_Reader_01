@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "NFC_Reader_01"
+rootProject.name = "MS206_Shutdown_tool"
 include(":app")

@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+  <path
+      android:name="bar"
+      android:pathData="M12,3 L12,12"
+      android:strokeWidth="2.5"
+      android:strokeColor="#C62828"
+      android:strokeLineCap="round"
+      android:fillColor="#00000000" />
+
+  <path
+      android:name="circle"
+      android:pathData="M17.65,6.35 A 8,8 0 1 1 6.35,6.35"
+      android:strokeWidth="2.5"
+      android:strokeColor="#C62828"
+      android:strokeLineCap="round"
+      android:fillColor="#00000000" />
+
+</vector>

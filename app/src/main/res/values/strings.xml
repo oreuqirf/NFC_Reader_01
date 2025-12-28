@@ -1,6 +1,6 @@
 <resources>
-    <string name="app_name">MS206 Calibration</string>
-    <string name="app_version_rev">Rev.1.02</string>
+    <string name="app_name">MS206 Shutdown Tool</string>
+    <string name="app_version_rev">Rev.1.01</string>
 
     <string name="title_home">Home</string>
     <string name="title_dashboard">Dashboard</string>
@@ -96,6 +96,13 @@
 
     <string name="error_protocol_unknown">PROTOCOL ERROR: Unknown code 0x%1$s</string>
 
+
+    <string name="shutdown_status_ready">Ready to shutdown device</string>
+    <string name="shutdown_status_sending">Sending command...</string>
+    <string name="btn_execute_shutdown">EXECUTE SHUTDOWN</string>
+    <string name="toast_requesting_shutdown">Requesting shutdown...</string>
+
+    <string name="nav_title_shutdown">Device Shutdown</string>
 
 </resources>
 

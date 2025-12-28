@@ -1,7 +1,7 @@
 <resources>
     <!-- Cadenas Generales de la App -->
-    <string name="app_name">Calibracion MS206</string>
-    <string name="app_version_rev">Rev.1.02</string>
+    <string name="app_name">MS206 Apagado</string>
+    <string name="app_version_rev">Rev.1.01</string>
 
     <!-- Títulos de Menú/Navegación -->
     <string name="title_home">Inicio</string>
@@ -105,5 +105,12 @@
 
     <string name="error_protocol_unknown">ERROR DE PROTOCOLO: Código desconocido 0x%1$s</string>
 
+
+    <string name="shutdown_status_ready">Listo para apagar el equipo</string>
+    <string name="shutdown_status_sending">Enviando comando...</string>
+    <string name="btn_execute_shutdown">EJECUTAR APAGADO</string>
+    <string name="toast_requesting_shutdown">Solicitando apagado...</string>
+
+    <string name="nav_title_shutdown">Apagado de Equipo</string>
 
 </resources>

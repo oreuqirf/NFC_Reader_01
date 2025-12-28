@@ -18,7 +18,7 @@ android {
         // ACTUALIZADO: targetSdk debe coincidir con compileSdk.
         targetSdk = 35
         versionCode = 1
-        versionName = "Rev.8.01.13"
+        versionName = "Rev.1.01"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
