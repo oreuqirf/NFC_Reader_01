@@ -1,11 +1,15 @@
 package com.example.nfc_reader_01.ui.dashboard
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -14,18 +18,13 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.example.nfc_reader_01.SharedNfcViewModel
 import com.example.nfc_reader_01.data.NfcDataParser
 import com.example.nfc_reader_01.databinding.FragmentDashboardBinding
-import com.example.nfc_reader_01.ui.configuration.ConfigurationFragment.Companion.CONFIG_BYTE_SIZE
-import com.example.nfc_reader_01.NfcState // IMPORTANTE: Importar el estado robusto
-import com.example.nfc_reader_01.utils.LogManager
+import com.example.nfc_reader_01.NfcState
+import com.example.nfc_reader_01.R
+import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 import kotlin.ExperimentalStdlibApi
 
-/**
- * Fragmento para mostrar los datos leídos de la etiqueta NFC (respuesta 0x8X) en campos estructurados.
- */
 @OptIn(ExperimentalStdlibApi::class)
 class DashboardFragment : Fragment() {
 
@@ -41,19 +40,14 @@ class DashboardFragment : Fragment() {
     private val CMD_READ_CONFIG: Byte = 0x03
     private val CMD_READ_ENGINEERING: Byte = 0x05
 
-    // --- TAMAÑOS ÚTILES ESPERADOS DEL PAYLOAD ---
-    private val IDENTITY_PAYLOAD_SIZE = 12 // 3 Ints (12 bytes)
-    private val PROCESS_PAYLOAD_SIZE = 36  // 9 Ints (36 bytes)
-
-    // CORRECCIÓN: Actualizado a 48 bytes (12 Ints * 4 bytes)
-    // Incluye: 10 campos originales + rakFrameCounter + lastTripFlow
-    private val ENGINEERING_PAYLOAD_SIZE = 48
-    // --------------------------------------------------------------------------------------------------
+    // Tamaños MÍNIMOS esperados
+    private val IDENTITY_MIN_SIZE = 12
+    private val PROCESS_MIN_SIZE = 36
+    private val ENGINEERING_MIN_SIZE = 48
+    private val CONFIG_MIN_SIZE = 96
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         _binding = FragmentDashboardBinding.inflate(inflater, container, false)
         return binding.root
@@ -62,91 +56,134 @@ class DashboardFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupListeners()
+        setupFlowToggles()
         setupObservers()
+    }
+
+    // --- Lógica de conmutación L/h <-> L/min ---
+    private fun setupFlowToggles() {
+        val flowFields = listOf(
+            binding.editTextFlow,
+            binding.editTextFlowUncal,
+            binding.editTextLastTripFlow
+        )
+
+        for (field in flowFields) {
+            field.setOnClickListener { view ->
+                toggleFlowUnit(view as TextView)
+            }
+        }
+    }
+
+    private fun toggleFlowUnit(textView: TextView) {
+        val baseValueLph = textView.tag as? Float ?: return
+        val currentText = textView.text.toString()
+
+        if (currentText.contains("L/h")) {
+            val valueLpm = baseValueLph / 60.0f
+            textView.text = String.format(Locale.US, "%.3f L/min", valueLpm)
+        } else {
+            textView.text = String.format(Locale.US, "%.2f L/h", baseValueLph)
+        }
+    }
+
+    // --- GESTIÓN DE ESTADO DE BOTONES ---
+
+    private fun setButtonState(button: View, isEnabled: Boolean) {
+        if (button !is MaterialButton) return
+        button.isEnabled = isEnabled
+        val primaryColor = ContextCompat.getColor(requireContext(), R.color.purple_500)
+        val disabledColor = Color.GRAY
+        button.backgroundTintList = ColorStateList.valueOf(if (isEnabled) primaryColor else disabledColor)
+    }
+
+    private fun enableAllButtons() {
+        setButtonState(binding.requestIdentityButton, true)
+        setButtonState(binding.requestProcessButton, true)
+        setButtonState(binding.requestEngineeringButton, true)
+        // Eliminado: setButtonState(binding.requestConfigButton, true)
     }
 
     private fun setupListeners() {
         binding.requestIdentityButton.setOnClickListener {
+            setButtonState(it, false)
             sharedViewModel.sendCommand(CMD_READ_IDENTITY)
-            sharedViewModel.setUiMessage("Comando 0x${CMD_READ_IDENTITY.toHexString()} (Identidad) preparado. Acerque el TAG.")
+            sharedViewModel.setUiMessage(getString(R.string.status_scan_pending, CMD_READ_IDENTITY.toHexString()))
         }
 
         binding.requestProcessButton.setOnClickListener {
+            setButtonState(it, false)
             sharedViewModel.sendCommand(CMD_READ_PROCESS)
-            sharedViewModel.setUiMessage("Comando 0x${CMD_READ_PROCESS.toHexString()} (Proceso) preparado. Acerque el TAG.")
-        }
-
-        binding.requestConfigButton.setOnClickListener {
-            sharedViewModel.sendCommand(CMD_READ_CONFIG)
-            sharedViewModel.setUiMessage("Comando 0x${CMD_READ_CONFIG.toHexString()} (Configuración) preparado. Acerque el TAG.")
+            sharedViewModel.setUiMessage(getString(R.string.status_scan_pending, CMD_READ_PROCESS.toHexString()))
         }
 
         binding.requestEngineeringButton.setOnClickListener {
+            setButtonState(it, false)
             sharedViewModel.sendCommand(CMD_READ_ENGINEERING)
-            sharedViewModel.setUiMessage("Comando 0x${CMD_READ_ENGINEERING.toHexString()} (Ingeniería) preparado. Acerque el TAG.")
+            sharedViewModel.setUiMessage(getString(R.string.status_scan_pending, CMD_READ_ENGINEERING.toHexString()))
         }
+
+        // Eliminado el Listener de requestConfigButton
     }
 
     private fun setupObservers() {
-        // Observa mensaje de UI
+        // Mensaje UI
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 sharedViewModel.uiMessage.collect { message ->
                     try {
                         binding.textMessage.setText(message)
-                    } catch (e: Exception) {
-                        Log.d(TAG, "Estado NFC: $message")
-                    }
+                    } catch (_: Exception) { }
                 }
             }
         }
 
-        // Observador 0x81 (Identidad)
+        // 0x01 Identidad
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 sharedViewModel.identityResponseData.collect { data ->
                     if (data != null && data.isNotEmpty()) {
-                        if (data.size >= IDENTITY_PAYLOAD_SIZE) {
-                            val usefulBytes = data.sliceArray(0 until IDENTITY_PAYLOAD_SIZE)
-                            parseIdentityData(usefulBytes)
-                            sharedViewModel.setUiMessage("Respuesta 0x81: Datos de Identidad cargados con éxito.")
+                        enableAllButtons()
+                        if (data.size >= IDENTITY_MIN_SIZE) {
+                            parseIdentityData(data)
+                            sharedViewModel.setUiMessage(getString(R.string.msg_read_success_identity))
                         } else {
-                            sharedViewModel.setUiMessage("ERROR 0x81: Respuesta incompleta (${data.size}/$IDENTITY_PAYLOAD_SIZE).")
+                            sharedViewModel.setUiMessage("ERROR 0x01: Tamaño ${data.size} < $IDENTITY_MIN_SIZE")
                         }
                     }
                 }
             }
         }
 
-        // Observador 0x82 (Proceso)
+        // 0x02 Proceso
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 sharedViewModel.processResponseData.collect { data ->
                     if (data != null && data.isNotEmpty()) {
-                        if (data.size >= PROCESS_PAYLOAD_SIZE) {
-                            val usefulBytes = data.sliceArray(0 until PROCESS_PAYLOAD_SIZE)
-                            parseProcessData(usefulBytes)
-                            sharedViewModel.setUiMessage("Respuesta 0x82: Datos de Proceso actualizados.")
+                        enableAllButtons()
+                        if (data.size >= PROCESS_MIN_SIZE) {
+                            parseProcessData(data)
+                            sharedViewModel.setUiMessage(getString(R.string.msg_read_success_process))
                         } else {
-                            sharedViewModel.setUiMessage("ERROR 0x82: Respuesta incompleta (${data.size}/$PROCESS_PAYLOAD_SIZE).")
+                            sharedViewModel.setUiMessage("ERROR 0x02: Tamaño ${data.size} < $PROCESS_MIN_SIZE")
                         }
                     }
                 }
             }
         }
 
-        // Observador 0x83 (Configuración)
+        // 0x03 Configuración (Mantenemos el observer por si se lee desde otro lado, pero no se activa por botón aquí)
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 sharedViewModel.configurationResponseData.collect { data ->
                     if (data != null && data.isNotEmpty()) {
-                        if (data.size >= CONFIG_BYTE_SIZE) {
-                            val usefulBytes = data.sliceArray(0 until CONFIG_BYTE_SIZE)
-                            parseConfigData(usefulBytes)
-                            sharedViewModel.setUiMessage("Respuesta 0x83: Datos de Configuración cargados correctamente.")
+                        enableAllButtons()
+                        if (data.size >= CONFIG_MIN_SIZE) {
+                            parseConfigData(data)
+                            sharedViewModel.setUiMessage(getString(R.string.msg_read_success_config))
                             sharedViewModel.clearConfigurationResponseData()
                         } else {
-                            sharedViewModel.setUiMessage("ERROR 0x83: Respuesta incompleta (${data.size}/$CONFIG_BYTE_SIZE).")
+                            sharedViewModel.setUiMessage("ERROR 0x03: Tamaño ${data.size} < $CONFIG_MIN_SIZE")
                             sharedViewModel.clearConfigurationResponseData()
                         }
                     }
@@ -154,55 +191,52 @@ class DashboardFragment : Fragment() {
             }
         }
 
-        // Observador 0x85 (Ingeniería)
+        // 0x05 Ingeniería
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 sharedViewModel.engineeringResponseData.collect { data ->
                     if (data != null && data.isNotEmpty()) {
-                        // Usamos el tamaño actualizado de 48 bytes
-                        if (data.size >= ENGINEERING_PAYLOAD_SIZE) {
-                            val usefulBytes = data.sliceArray(0 until ENGINEERING_PAYLOAD_SIZE)
-                            parseEngineeringData(usefulBytes)
-                            sharedViewModel.setUiMessage("Respuesta 0x85: Datos de Ingeniería cargados.")
+                        enableAllButtons()
+                        if (data.size >= ENGINEERING_MIN_SIZE) {
+                            parseEngineeringData(data)
+                            sharedViewModel.setUiMessage(getString(R.string.msg_read_success_engineering) + " (${data.size} B)")
                         } else {
-                            sharedViewModel.setUiMessage("ERROR 0x85: Respuesta incompleta (${data.size}/$ENGINEERING_PAYLOAD_SIZE).")
+                            sharedViewModel.setUiMessage("ERROR 0x05: Tamaño ${data.size} < $ENGINEERING_MIN_SIZE")
                         }
                     }
                 }
             }
         }
 
-        // --- CORRECCIÓN CLAVE: Observador de Toast usando NfcState ---
+        // Estado General
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 sharedViewModel.writeStatus.collect { state ->
+                    if (state !is NfcState.Loading && state !is NfcState.Idle) {
+                        enableAllButtons()
+                    }
                     when (state) {
                         is NfcState.Success -> {
-                            // Éxito: Toast corto genérico (opcional)
-                            Toast.makeText(context, "Operación Exitosa", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, getString(R.string.msg_command_success), Toast.LENGTH_SHORT).show()
                         }
                         is NfcState.Error -> {
-                            // Error: Extraemos el mensaje del objeto de error
+                            enableAllButtons()
                             Toast.makeText(context, state.errorMessage, Toast.LENGTH_LONG).show()
-                            // También lo mostramos en el log de UI
                             sharedViewModel.setUiMessage(state.errorMessage)
                         }
-                        is NfcState.Loading -> {
-                            // Opcional: Mostrar spinner o mensaje "Cargando..."
-                        }
-                        is NfcState.Idle -> {
-                            // Nada que hacer
-                        }
+                        is NfcState.Loading -> { }
+                        is NfcState.Idle -> { }
                     }
                 }
             }
         }
     }
 
+    // --- PARSERS ---
+
     private fun parseIdentityData(data: ByteArray) {
         try {
             val identity = NfcDataParser.parseIdentityData(data)
-
             val highPart = (identity.deviceId shr 16) and 0xFFFF
             val lowPart = identity.deviceId and 0xFFFF
             val formattedSerial = String.format(Locale.US, "%05d-%05d", highPart, lowPart)
@@ -213,7 +247,7 @@ class DashboardFragment : Fragment() {
 
         } catch (e: Exception) {
             Log.e(TAG, "Error parseIdentityData: ${e.message}")
-            binding.editTextSerialNumber.setText("ERROR PARSEO")
+            binding.editTextSerialNumber.setText("ERROR PARSE")
         }
         clearProcessValueFields()
         clearFlowPeriodFields()
@@ -223,27 +257,28 @@ class DashboardFragment : Fragment() {
     private fun parseProcessData(data: ByteArray) {
         try {
             val process = NfcDataParser.parseProcessData(data)
-
-            // Conversión Int -> Float con escalado (ej. miliunidades)
             val floatVolume = process.volume / 1000.0f
-            val floatFlowRate = process.flowRate.toFloat()
-            val floatTemperature = process.temperature.toFloat()
+            val floatFlowRate = process.flowRate.toFloat() / 100.0f
+            val floatTemperature = process.temperature.toFloat() / 10.0f
             val floatBattery = process.battery.toFloat()
 
             binding.editTextVolume.setText(String.format(Locale.US, "%.3f m³", floatVolume))
-            binding.editTextFlow.setText(String.format(Locale.US, "%.1f L/h", floatFlowRate))
+
+            binding.editTextFlow.tag = floatFlowRate
+            binding.editTextFlow.setText(String.format(Locale.US, "%.2f L/h", floatFlowRate))
+
             binding.editTextTemperature.setText(String.format(Locale.US, "%.1f °C", floatTemperature))
             binding.editTextBattery.setText(String.format(Locale.US, "%.1f %%", floatBattery))
             binding.editTextStatus.setText("0x${process.statusFlags.toHexString()}")
 
-            binding.editTextDirectFlowPeriod.setText("${process.directFlowPeriod} sec")
-            binding.editTextReverseFlowPeriod.setText("${process.reverseFlowPeriod} sec")
-            binding.editTextNoFlowPeriod.setText("${process.noFlowPeriod} sec")
-            binding.editTextLeakagePeriod.setText("${process.leakageFlowPeriod} sec")
+            binding.editTextDirectFlowPeriod.setText("${process.directFlowPeriod} m")
+            binding.editTextReverseFlowPeriod.setText("${process.reverseFlowPeriod} m")
+            binding.editTextNoFlowPeriod.setText("${process.noFlowPeriod} m")
+            binding.editTextLeakagePeriod.setText("${process.leakageFlowPeriod} m")
 
         } catch (e: Exception) {
             Log.e(TAG, "Error parseProcessData: ${e.message}")
-            binding.editTextVolume.setText("ERROR PARSEO")
+            binding.editTextVolume.setText("ERROR PARSE")
         }
         clearIdentityFields()
         clearEngineeringFields()
@@ -251,9 +286,9 @@ class DashboardFragment : Fragment() {
 
     private fun parseConfigData(data: ByteArray) {
         try {
-            // Lógica de visualización de configuración (si fuera necesario en este fragmento)
+            NfcDataParser.parseConfigData(data)
         } catch (e: Exception) {
-            Log.e(TAG, "Error parseConfigData: ${e.message}")
+            Log.e(TAG, "Config parse check failed: ${e.message}")
         }
         clearIdentityFields(keepLastConfigDate = false)
         clearProcessValueFields()
@@ -265,42 +300,44 @@ class DashboardFragment : Fragment() {
         try {
             val engineering = NfcDataParser.parseEngineeringData(data)
 
-            // CORRECCIÓN: Usar .toFloat() y aplicar factores de escala
-            // Volumen: / 1000.0f
             val floatVolL = engineering.volumeLiters.toFloat() / 1000.0f
             val floatVolLU = engineering.volumeLitersUncal.toFloat() / 1000.0f
-            // Temperatura: / 10.0f
             val floatTempU = engineering.temperatureUncal.toFloat() / 10.0f
+            val floatFlowU = engineering.flowUncal.toFloat() / 100.0f
 
-            val floatFlowU = engineering.flowUncal.toFloat() / 10.0f;
             val floatTtof = engineering.ttof.toFloat() / 1000.0f
             val floatDtof = engineering.dtof.toFloat() / 1000.0f
-            val floatStdDev = engineering.stdDev.toFloat() / 10.0f
-            val floatChipTemp = engineering.chipTemperature.toFloat() / 10.0f
+            val floatStdDev = engineering.stdDev.toFloat()
+
+            val floatLuxThreshold = engineering.lux_threshold.toFloat()
             val floatLux = engineering.lux.toFloat()
+            val floatLastTripFlow = engineering.lastTripFlow.toFloat() / 100.0f
+            val floatTempCal = engineering.temperature.toFloat() / 10.0f
 
-            // Nuevo campo: Último Caudal (Se asume en L/h, escalado por 10 )
-            val floatLastTripFlow = engineering.lastTripFlow.toFloat() / 10.0f
-
-            binding.editTextVolumeLiters.setText(String.format(Locale.US, "%.3f L", floatVolL)) // 3 decimales
-            binding.editTextVolumeLitersUncal.setText(String.format(Locale.US, "%.3f L", floatVolLU)) // 3 decimales
+            binding.editTextVolumeLiters.setText(String.format(Locale.US, "%.3f L", floatVolL))
+            binding.editTextVolumeLitersUncal.setText(String.format(Locale.US, "%.3f L", floatVolLU))
             binding.editTextTemperatureUncal.setText(String.format(Locale.US, "%.2f °C", floatTempU))
 
+            binding.editTextFlowUncal.tag = floatFlowU
             binding.editTextFlowUncal.setText(String.format(Locale.US, "%.2f L/h", floatFlowU))
-            binding.editTextTtof.setText(String.format(Locale.US, "%.2f usec", floatTtof))
-            binding.editTextDtof.setText(String.format(Locale.US, "%.2f psec", floatDtof))
-            binding.editTextStdDev.setText(String.format(Locale.US, "%.2f psec", floatStdDev))
-            binding.editTextTime.setText("${engineering.time} sec")
-            binding.editTextChipTemperature.setText(String.format(Locale.US, "%.2f °C", floatChipTemp))
-            binding.editTextLux.setText(String.format(Locale.US, "%.2f mV", floatLux))
 
+            binding.editTextTtof.setText(String.format(Locale.US, "%.3f us", floatTtof))
+            binding.editTextDtof.setText(String.format(Locale.US, "%.3f ps", floatDtof))
+            binding.editTextStdDev.setText(String.format(Locale.US, "%.1f ps", floatStdDev))
+            binding.editTextTime.setText("${engineering.time} s")
+
+            binding.editTextTempCalibrated.setText(String.format(Locale.US, "%.2f °C", floatTempCal))
+            binding.editTextLuxThreshold.setText(String.format(Locale.US, "%.0f", floatLuxThreshold))
+
+            binding.editTextLux.setText(String.format(Locale.US, "%.0f", floatLux))
             binding.editTextRakFrameCounter.setText("${engineering.rakFrameCounter}")
-            binding.editTextLastTripFlow.setText(String.format(Locale.US, "%.3f L/h", floatLastTripFlow))
+
+            binding.editTextLastTripFlow.tag = floatLastTripFlow
+            binding.editTextLastTripFlow.setText(String.format(Locale.US, "%.2f L/h", floatLastTripFlow))
 
         } catch (e: Exception) {
             Log.e(TAG, "Error parseEngineeringData: ${e.message}")
-            val msg = if (e is IllegalArgumentException) "Error Tamaño" else "Error Parseo"
-            binding.editTextVolumeLiters.setText(msg)
+            binding.editTextVolumeLiters.setText("ERROR PARSE")
         }
 
         clearIdentityFields()
@@ -308,7 +345,6 @@ class DashboardFragment : Fragment() {
         clearFlowPeriodFields()
     }
 
-    // --- Funciones de Limpieza ---
     private fun clearIdentityFields(keepLastConfigDate: Boolean = false) {
         binding.editTextSerialNumber.setText("")
         binding.editTextFirmwareVersion.setText("")
@@ -321,6 +357,7 @@ class DashboardFragment : Fragment() {
         binding.editTextTemperature.setText("")
         binding.editTextBattery.setText("")
         binding.editTextStatus.setText("")
+        binding.editTextFlow.tag = null
     }
 
     private fun clearFlowPeriodFields() {
@@ -339,10 +376,13 @@ class DashboardFragment : Fragment() {
         binding.editTextDtof.setText("")
         binding.editTextStdDev.setText("")
         binding.editTextTime.setText("")
-        binding.editTextChipTemperature.setText("")
+        binding.editTextTempCalibrated.setText("")
+        binding.editTextLuxThreshold.setText("")
         binding.editTextLux.setText("")
         binding.editTextRakFrameCounter.setText("")
         binding.editTextLastTripFlow.setText("")
+        binding.editTextFlowUncal.tag = null
+        binding.editTextLastTripFlow.tag = null
     }
 
     override fun onDestroyView() {
@@ -351,6 +391,6 @@ class DashboardFragment : Fragment() {
     }
 }
 
-// Extensiones útiles
-fun ByteArray.toHexString() = joinToString(separator = " ") { String.format("%02X", it) }
-fun Byte.toHexString() = String.format("%02X", this)
+fun ByteArray.toHexString() = joinToString(" ") { "%02X".format(it) }
+fun Byte.toHexString() = String.format("%02X", this.toInt() and 0xFF)
+fun Int.toHexString() = String.format("%04X", this)

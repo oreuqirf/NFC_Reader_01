@@ -1,7 +1,6 @@
 <resources>
     <!-- Cadenas Generales de la App -->
-    <string name="app_name">MS206 Apagado</string>
-    <string name="app_version_rev">Rev.1.01</string>
+    <string name="app_name">MS206 Calibración</string>
 
     <!-- Títulos de Menú/Navegación -->
     <string name="title_home">Inicio</string>
@@ -9,6 +8,15 @@
     <string name="title_configuration">Configuración</string>
     <string name="title_calibration">Calibración</string>
     <string name="title_notifications">Notificaciones</string>
+
+    <string name="status_nfc_idle">Aproxime una etiqueta NFC para empezar.</string>
+    <string name="status_nfc_detected">¡TAG detectado! Navegando a la información...</string>
+    <string name="toast_nfc_connected">¡Etiqueta NFC conectada! Analizando datos.</string>
+
+    <string name="desc_lang_es">Español</string>
+    <string name="desc_lang_en">Inglés</string>
+    <string name="desc_lang_zh">Chino</string>
+    <string name="desc_nfc_status_icon">Icono de estado NFC</string>
 
     <!-- Fragmento Inicio -->
     <string name="nfc_status_placeholder">Estatus de NFC</string>
@@ -45,7 +53,6 @@
     <string name="hint_dtof">DToF</string>
     <string name="hint_std_dev">StdDev</string>
     <string name="hint_time_sec">Tiempo [seg]</string>
-    <string name="hint_chip_temperature">Temperatura Chip</string>
     <string name="hint_lux">Lux</string>
     <string name="hint_rak_frame_counter">RAK Frame Counter</string>
     <string name="hint_last_trip_flow">Último Caudal (Last Trip)</string>
@@ -81,14 +88,6 @@
     <string name="toast_pattern_read_format">Patrón Leído: %1$s</string>
     <string name="toast_error_reading">Error lectura patrón.</string>
 
-    <string name="cal_type_temp_only">Solo Temperatura</string>
-    <string name="cal_type_flow_10l">Caudal 10 L/m (600 L/h)</string>
-    <string name="cal_type_flow_1l">Caudal 1 L/m (60 L/h)</string>
-    <string name="cal_type_flow_035l">Caudal 0.35 L/m (21 L/h)</string>
-    <string name="cal_type_flow_q2">Caudal Q2 (10 L/h)</string>
-    <string name="cal_type_flow_q1">Caudal Q1 (6 L/h)</string>
-    <string name="cal_type_flow_q3">Caudal Q3 (2500 L/h)</string>
-    <string name="cal_type_unknown">Desconocido / Temp</string>
 
     <string name="status_waiting_nfc">Esperando conexión NFC...</string>
     <string name="error_tag_empty">Error: Etiqueta vacía o sin datos.</string>
@@ -112,5 +111,136 @@
     <string name="toast_requesting_shutdown">Solicitando apagado...</string>
 
     <string name="nav_title_shutdown">Apagado de Equipo</string>
+
+    <string name="msg_export_success">Configuración exportada correctamente.</string>
+    <string name="msg_export_error_no_data">No hay datos para exportar. Lea la configuración primero.</string>
+    <string name="msg_export_error_write">Error al escribir el archivo.</string>
+
+
+        <string name="title_config_data">Datos de Configuración (Editables):</string>
+        <string name="title_temp_correction">Corrección de Temperatura:</string>
+        <string name="title_flow_correction">Corrección de Caudal (% Error):</string>
+        <string name="title_main_actions">Acciones Principales</string>
+        <string name="title_special_commands">Comandos Especiales:</string>
+        <string name="text_no_data">Sin datos de lectura</string>
+        <string name="text_pending_save">PENDIENTE DE GUARDAR</string>
+
+        <string name="hint_k_meter">K_meter (Factor)</string>
+        <string name="hint_temp_raw_low">Temp Raw Low</string>
+        <string name="hint_temp_raw_high">Temp Raw High</string>
+        <string name="hint_temp_cal_low">Temp Cal Low</string>
+        <string name="hint_temp_cal_high">Temp Cal High</string>
+
+        <string name="hint_fc_q1">FC Q1</string>
+        <string name="hint_fc_q2">FC Q2</string>
+        <string name="hint_fc_035">FC 0.35 L/min</string>
+        <string name="hint_fc_100">FC 1.00 L/min</string>
+        <string name="hint_fc_1000">FC 10.00 L/min</string>
+        <string name="hint_fc_q3">FC Q3</string>
+
+        <string name="btn_read_config">Leer Configuración (0x03)</string>
+        <string name="btn_save_config">Guardar Configuración (0x04)</string>
+        <string name="btn_load_file">Cargar de Archivo</string>
+        <string name="btn_export_file">Descargar a Archivo</string>
+
+        <string name="btn_set_volume">Set Volumen (0x14)</string>
+        <string name="btn_normal_mode">Modo Normal (0x12)</string>
+        <string name="btn_calibrate_flow">Calibrar Caudal (0x13)</string>
+        <string name="btn_engineering_mode">Modo Ingeniería (0x15)</string>
+        <string name="btn_factory_reset">Restablecer Fábrica (0x0A)</string>
+
+        <!-- Botones Inferiores -->
+        <string name="btn_config_volume">Configurar\nVolumen\n(0X14)</string>
+        <string name="btn_user_mode">Modo\nUsuario\n(0X12)</string>
+        <string name="btn_clear_flags">Limpiar\nBanderas\n(0X16)</string>
+        <string name="btn_autocalibration">Modo\nAutocalibración</string>
+        <string name="btn_reset_volume">Reiniciar\nVolumen</string>
+        <string name="btn_shutdown">Apagar\nEquipo\n(0X10)</string>
+        <string name="btn_save_batch">Guardar\nLote</string>
+        <string name="btn_export_csv">Exportar\nCSV</string>
+
+
+
+    <string name="dialog_title_volume">Establecer Volumen</string>
+        <string name="dialog_msg_volume">Ingrese el nuevo valor (Float):</string>
+        <string name="dialog_btn_accept">Aceptar</string>
+        <string name="dialog_btn_cancel">Cancelar</string>
+
+        <string name="msg_error_read_first">ERROR: Lea la configuración primero.</string>
+        <string name="msg_error_invalid_fields">Revise los campos inválidos.</string>
+        <string name="msg_config_read">Configuración Leída.</string>
+        <string name="msg_error_parse">Error de parseo.</string>
+        <string name="msg_error_data_size">Error: Tamaño de datos incorrecto.</string>
+        <string name="msg_command_success">Comando Ejecutado Exitosamente</string>
+        <string name="msg_file_loaded">Archivo cargado correctamente.</string>
+        <string name="msg_error_json">Error: Estructura JSON inválida.</string>
+        <string name="msg_invalid_value">Valor inválido.</string>
+
+    <string name="hint_lux_threshold">Umbral Lux</string>
+    <string name="hint_temp_calibrated">Temp Calibrada [°C]</string>
+
+    <string name="status_first_scan">Primer Scan: Comando 0x%1$s</string>
+    <string name="status_scan_pending">Scan: 0x%1$s pendiente...</string>
+    <string name="status_reading_pattern">Leyendo Patrón (0x05)...</string>
+    <string name="status_writing_config">Escribiendo Configuración...</string>
+    <string name="status_setting_volume">Estableciendo Volumen...</string>
+    <string name="status_calibrating">Calibrando Flujo...</string>
+    <string name="status_eng_mode">Entrando Modo Ing. (0x15)...</string>
+    <string name="status_req_sent_wait">Solicitud enviada. MANTENGA para confirmar...</string>
+    <string name="status_fallback_ok">Recuperación OK. Reintente.</string>
+    <string name="error_critical">Error Crítico NFC</string>
+    <string name="error_ndef_io">Error de E/S NDEF</string>
+    <string name="error_response_not_found">Respuesta no hallada en el TAG.</string>
+
+    <string name="btn_continue_manual">Ingresar Valores</string>
+    <string name="hint_select_flow_type">Seleccione Caudal</string>
+
+    <string name="manual_opt_temp">Solo Temperatura (0 L/m)</string>
+    <string name="manual_opt_q1">Caudal Q1 (Bajo)</string>
+    <string name="manual_opt_q2">Caudal Q2 (Medio-Bajo)</string>
+    <string name="manual_opt_035">Caudal 0.35 L/m</string>
+    <string name="manual_opt_1">Caudal 1.0 L/m</string>
+    <string name="manual_opt_10">Caudal 10.0 L/m</string>
+    <string name="manual_opt_q3">Caudal Q3 (Máximo)</string>
+
+    <string name="label_last_update">Última actualización:</string>
+    <string name="btn_write_config">Escribir Config</string>
+
+    <string name="header_general_params">Parámetros Generales</string>
+    <string name="header_temperature_cal">Calibración de Temperatura</string>
+    <string name="header_flow_error_curve">Curva de Error de Flujo</string>
+    <string name="header_device_commands">Comandos del Dispositivo</string>
+
+    <string name="btn_enter_eng_mode">Modo Ingeniería</string>
+    <string name="btn_reset_device">Reiniciar Volumen</string>
+
+
+    <string name="cal_type_temp_only">Solo Temperatura (0 L/h)</string>
+    <string name="cal_type_flow_q1">Caudal Q1 (Mínimo) (6.25 L/h)</string>
+    <string name="cal_type_flow_q2">Caudal Q2 (Transición) (10.31 L/h)</string>
+    <string name="cal_type_flow_035l">Caudal 0.35 L/m (21 L/h)</string>
+    <string name="cal_type_flow_1l">Caudal 1.0 L/m (60 L/h)</string>
+    <string name="cal_type_flow_10l">Caudal 10.0 L/m (600 L/h)</string>
+    <string name="cal_type_flow_q3">Caudal Q3 (2500 L/h)</string>
+    <string name="cal_type_unknown">Desconocido</string>
+
+    <string name="btn_reset_pending">Acerque teléfono... (Toque para cancelar)</string>
+    <string name="btn_reset_success">¡Volumen Reseteado!</string>
+
+    <string name="label_acc_skip_threshold">Umbral de Salto de Acumulación</string>
+
+
+    <!-- Encabezados -->
+    <string name="header_device_identity">Identidad del Equipo</string>
+
+    <!-- Cajas de texto (Hints) -->
+    <string name="hint_low_stability">Estabilidad Low (%)</string>
+    <string name="hint_high_stability">Estabilidad High (%)</string>
+    <string name="hint_q1_error">Q1 Error Factor</string>
+    <string name="hint_q2_error">Q2 Error Factor</string>
+    <string name="hint_035l_error">0.35L Error Factor</string>
+    <string name="hint_100l_error">1.00L Error Factor</string>
+    <string name="hint_10l_error">10.0L Error Factor</string>
+    <string name="hint_q3_error">Q3 Error Factor</string>
 
 </resources>

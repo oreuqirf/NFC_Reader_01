@@ -7,6 +7,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+// IMPORTANTE: Agregar estas importaciones para el idioma
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -16,7 +19,7 @@ import com.example.nfc_reader_01.NfcInteractionListener
 import com.example.nfc_reader_01.R
 import com.example.nfc_reader_01.SharedNfcViewModel
 import com.example.nfc_reader_01.databinding.FragmentHomeBinding
-import com.example.nfc_reader_01.NfcState // IMPORTANTE: Importar la clase de estado
+import com.example.nfc_reader_01.NfcState
 import kotlinx.coroutines.launch
 
 class HomeFragment : Fragment() {
@@ -24,18 +27,14 @@ class HomeFragment : Fragment() {
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
 
-    // Usar by activityViewModels() para inyectar y obtener la instancia compartida
     private val sharedNfcViewModel: SharedNfcViewModel by activityViewModels()
-
-    private var listener: NfcInteractionListener? = null // Referencia a la Activity (Listener)
+    private var listener: NfcInteractionListener? = null
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        // 1. Asegurarse de que la Activity implemente la interfaz
         if (context is NfcInteractionListener) {
             listener = context
         } else {
-            // Se usa Log.wtf para errores críticos de configuración
             Log.wtf("HomeFragment", "$context debe implementar NfcInteractionListener")
         }
     }
@@ -46,8 +45,41 @@ class HomeFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
+        // SetupObservers se mantiene aquí o en onViewCreated, es igual
         setupObservers()
         return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        setupLanguageButtons()
+
+        // --- AGREGAR ESTO ---
+        // Asignamos la versión real definida en el build.gradle
+        try {
+            binding.textAppVersion.text = com.example.nfc_reader_01.BuildConfig.VERSION_NAME
+        } catch (e: Exception) {
+            Log.e("HomeFragment", "Error mostrando versión: ${e.message}")
+        }
+    }
+
+
+    // --- NUEVO: Función para configurar los clicks de idioma ---
+    private fun setupLanguageButtons() {
+        try {
+            binding.btnLangEs.setOnClickListener { setAppLocale("es") }
+            binding.btnLangEn.setOnClickListener { setAppLocale("en") }
+            binding.btnLangZh.setOnClickListener { setAppLocale("zh-CN") }
+        } catch (e: Exception) {
+            Log.e("HomeFragment", "Error configurando botones de idioma: ${e.message}")
+        }
+    }
+
+    // --- NUEVO: Función para cambiar el locale ---
+    private fun setAppLocale(languageCode: String) {
+        val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageCode)
+        AppCompatDelegate.setApplicationLocales(appLocale)
     }
 
     override fun onDestroyView() {
@@ -57,58 +89,51 @@ class HomeFragment : Fragment() {
 
     override fun onDetach() {
         super.onDetach()
-        listener = null // Limpiar la referencia para evitar pérdidas de memoria
+        listener = null
     }
 
     private fun setupObservers() {
-        // --- Observa nfcTagInfo (usando collect) ---
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+
+                // ... dentro de setupObservers() ...
+
                 sharedNfcViewModel.nfcTagInfo.collect { tagInfo ->
                     if (tagInfo != null) {
-                        // 1. Notificar a la Activity para navegar
                         listener?.navigateToDashboard()
 
-                        // 2. Actualizar la UI
                         binding.statusIcon.setImageResource(R.drawable.ic_nfc_connected_24)
-                        binding.statusMessage.text = "¡TAG detectado! Navegando a la información..."
 
-                        // 3. Mostrar un Toast claro
+                        // CAMBIO 1: Usar referencia R.string
+                        binding.statusMessage.setText(R.string.status_nfc_detected)
+
+                        // CAMBIO 2: Usar getString()
                         Toast.makeText(
                             context,
-                            "¡Etiqueta NFC conectada! Analizando datos.",
+                            getString(R.string.toast_nfc_connected),
                             Toast.LENGTH_SHORT
                         ).show()
 
                     } else {
-                        // Esto se ejecuta al inicio o si el ViewModel resetea el estado
                         binding.statusIcon.setImageResource(R.drawable.ic_nfc_scan_24)
-                        binding.statusMessage.text = "Aproxime una etiqueta NFC para empezar a leer."
+
+                        // CAMBIO 3: Usar referencia R.string
+                        binding.statusMessage.setText(R.string.status_nfc_idle)
                     }
                 }
             }
         }
 
-        // --- CORRECCIÓN AQUÍ: Observa writeStatus como NfcState ---
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 sharedNfcViewModel.writeStatus.collect { state ->
-                    // Usamos 'when' para manejar el objeto NfcState
                     when (state) {
-                        is NfcState.Success -> {
-                            // Opcional: Mostrar mensaje de éxito si es relevante en el Home
-                            // Toast.makeText(context, "Operación Exitosa", Toast.LENGTH_SHORT).show()
-                        }
+                        is NfcState.Success -> { }
                         is NfcState.Error -> {
-                            // Extraemos el mensaje de error del objeto
                             Toast.makeText(context, state.errorMessage, Toast.LENGTH_LONG).show()
                         }
-                        is NfcState.Loading -> {
-                            // Opcional: UI de carga
-                        }
-                        is NfcState.Idle -> {
-                            // Nada que hacer
-                        }
+                        is NfcState.Loading -> { }
+                        is NfcState.Idle -> { }
                     }
                 }
             }

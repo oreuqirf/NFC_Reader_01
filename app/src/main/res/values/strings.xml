@@ -1,6 +1,6 @@
 <resources>
-    <string name="app_name">MS206 Shutdown Tool</string>
-    <string name="app_version_rev">Rev.1.01</string>
+
+    <string name="app_name">MS206 Calibration</string>
 
     <string name="title_home">Home</string>
     <string name="title_dashboard">Dashboard</string>
@@ -8,14 +8,21 @@
     <string name="title_calibration">Calibration</string>
     <string name="title_notifications">Notifications</string>
 
+        <string name="status_nfc_idle">Approach an NFC tag to start.</string>
+        <string name="status_nfc_detected">TAG detected! Navigating to information...</string>
+        <string name="toast_nfc_connected">NFC tag connected! Analyzing data.</string>
+
+        <string name="desc_lang_es">Spanish</string>
+        <string name="desc_lang_en">English</string>
+        <string name="desc_lang_zh">Chinese</string>
+        <string name="desc_nfc_status_icon">NFC Status Icon</string>
+
     <string name="nfc_status_placeholder">NFC Status</string>
     <string name="nfc_characteristics_placeholder">Tag characteristics:</string>
     <string name="nfc_data_placeholder">Register content:</string>
 
     <string name="title_nfc_data">NFC Tag Data</string>
 
-    <string name="hint_serial_number">Serial Number</string>
-    <string name="hint_firmware_version">Firmware Version</string>
     <string name="hint_last_config_date">Last Configuration</string>
 
     <string name="hint_volume_m3">Volume [m³]</string>
@@ -37,7 +44,6 @@
     <string name="hint_dtof">DToF</string>
     <string name="hint_std_dev">StdDev</string>
     <string name="hint_time_sec">Time [sec]</string>
-    <string name="hint_chip_temperature">Chip Temperature</string>
     <string name="hint_lux">Lux</string>
     <string name="hint_rak_frame_counter">RAK Frame Counter</string>
     <string name="hint_last_trip_flow">Last Trip Flow</string>
@@ -71,14 +77,6 @@
     <string name="toast_pattern_read_format">Master Read: %1$s</string>
     <string name="toast_error_reading">Error reading master.</string>
 
-    <string name="cal_type_temp_only">Temperature Only</string>
-    <string name="cal_type_flow_10l">Flow 10 L/m (600 L/h)</string>
-    <string name="cal_type_flow_1l">Flow 1 L/m (60 L/h)</string>
-    <string name="cal_type_flow_035l">Flow 0.35 L/m (21 L/h)</string>
-    <string name="cal_type_flow_q2">Flow Q2 (10 L/h)</string>
-    <string name="cal_type_flow_q1">Flow Q1 (6 L/h)</string>
-    <string name="cal_type_flow_q3">Flow Q3 (2500 L/h)</string>
-    <string name="cal_type_unknown">Unknown / Temp</string>
 
 
     <string name="status_waiting_nfc">Waiting for NFC connection...</string>
@@ -103,6 +101,136 @@
     <string name="toast_requesting_shutdown">Requesting shutdown...</string>
 
     <string name="nav_title_shutdown">Device Shutdown</string>
+
+    <string name="msg_export_success">Configuration exported successfully.</string>
+    <string name="msg_export_error_no_data">No data to export. Read configuration first.</string>
+    <string name="msg_export_error_write">Error writing to file.</string>
+
+    <string name="title_config_data">Configuration Data (Editable):</string>
+        <string name="title_temp_correction">Temperature Correction:</string>
+        <string name="title_flow_correction">Flow Correction (% Error):</string>
+        <string name="title_main_actions">Main Actions</string>
+        <string name="title_special_commands">Special Commands:</string>
+        <string name="text_no_data">No data read</string>
+        <string name="text_pending_save">PENDING SAVE</string>
+
+        <string name="hint_k_meter">K_meter (Factor)</string>
+
+        <string name="hint_fc_q1">FC Q1</string>
+        <string name="hint_fc_q2">FC Q2</string>
+        <string name="hint_fc_035">FC 0.35 L/min</string>
+        <string name="hint_fc_100">FC 1.00 L/min</string>
+        <string name="hint_fc_1000">FC 10.00 L/min</string>
+        <string name="hint_fc_q3">FC Q3</string>
+
+        <string name="btn_read_config">Read Config (0x03)</string>
+        <string name="btn_save_config">Save Config (0x04)</string>
+        <string name="btn_load_file">Load from File</string>
+        <string name="btn_export_file">Download to File</string>
+
+        <string name="btn_set_volume">Set Volume (0x14)</string>
+        <string name="btn_normal_mode">Normal Mode (0x12)</string>
+        <string name="btn_calibrate_flow">Calibrate Flow (0x13)</string>
+        <string name="btn_engineering_mode">Engineering Mode (0x15)</string>
+        <string name="btn_factory_reset">Factory Reset (0x0A)</string>
+
+        <string name="dialog_title_volume">Set Volume</string>
+        <string name="dialog_msg_volume">Enter new value (Float):</string>
+        <string name="dialog_btn_accept">Accept</string>
+        <string name="dialog_btn_cancel">Cancel</string>
+
+        <string name="msg_error_read_first">ERROR: Read configuration first.</string>
+        <string name="msg_error_invalid_fields">Check invalid fields.</string>
+        <string name="msg_config_read">Configuration Read.</string>
+        <string name="msg_error_parse">Parsing error.</string>
+        <string name="msg_error_data_size">Error: Incorrect data size.</string>
+        <string name="msg_command_success">Command Executed Successfully</string>
+        <string name="msg_file_loaded">File loaded successfully.</string>
+        <string name="msg_error_json">Error: Invalid JSON structure.</string>
+        <string name="msg_invalid_value">Invalid value.</string>
+
+    <string name="hint_lux_threshold">Lux Threshold</string>
+    <string name="hint_temp_calibrated">Calibrated Temp [°C]</string>
+
+    <string name="status_first_scan">First Scan: Command 0x%1$s</string>
+    <string name="status_scan_pending">Scan: 0x%1$s pending...</string>
+    <string name="status_reading_pattern">Reading Pattern (0x05)...</string>
+    <string name="status_writing_config">Writing Configuration...</string>
+    <string name="status_setting_volume">Setting Volume...</string>
+    <string name="status_calibrating">Calibrating Flow...</string>
+    <string name="status_eng_mode">Entering Eng. Mode (0x15)...</string>
+    <string name="status_req_sent_wait">Request sent. HOLD to confirm...</string>
+    <string name="status_fallback_ok">Fallback OK. Retry.</string>
+    <string name="error_critical">Critical NFC Error</string>
+    <string name="error_ndef_io">NDEF I/O Error</string>
+    <string name="error_response_not_found">Response not found on TAG.</string>
+
+    <string name="btn_continue_manual">Enter Values</string>
+    <string name="hint_select_flow_type">Select Flow Rate</string>
+
+    <string name="manual_opt_temp">Temperature Only (0 L/m)</string>
+    <string name="manual_opt_q1">Flow Q1 (Low)</string>
+    <string name="manual_opt_q2">Flow Q2 (Mid-Low)</string>
+    <string name="manual_opt_035">Flow 0.35 L/m</string>
+    <string name="manual_opt_1">Flow 1.0 L/m</string>
+    <string name="manual_opt_10">Flow 10.0 L/m</string>
+    <string name="manual_opt_q3">Flow Q3 (Max)</string>
+
+    <string name="label_last_update">Last update:</string>
+    <string name="btn_write_config">Write Config</string>
+
+    <string name="header_general_params">General Parameters</string>
+    <string name="header_temperature_cal">Temperature Calibration</string>
+    <string name="header_flow_error_curve">Flow Error Curve</string>
+    <string name="header_device_commands">Device Commands</string>
+
+    <string name="btn_enter_eng_mode">Engineering Mode</string>
+    <string name="btn_reset_device">Reset Volume</string>
+
+    <string name="cal_type_temp_only">Temperature Only (0 L/h)</string>
+    <string name="cal_type_flow_q1">Flow Q1 (Min 6.25 L/h)</string>
+    <string name="cal_type_flow_q2">Flow Q2 (Transition 10.31 L/h)</string>
+    <string name="cal_type_flow_035l">Flow 0.35 L/m (21 L/h)</string>
+    <string name="cal_type_flow_1l">Flow 1.0 L/m (60 L/h)</string>
+    <string name="cal_type_flow_10l">Flow 10.0 L/m (600 L/h)</string>
+    <string name="cal_type_flow_q3">Flow Q3 (2500 L/h)</string>
+    <string name="cal_type_unknown">Unknown</string>
+
+    <string name="btn_reset_pending">Bring phone near... (Tap to cancel)</string>
+    <string name="btn_reset_success">Volume Reset Success</string>
+
+    <string name="label_acc_skip_threshold">Accumulation Skip Threshold</string>
+
+
+    <!-- Encabezados -->
+    <string name="header_device_identity">Device Identity</string>
+
+    <!-- Cajas de texto (Hints) -->
+    <string name="hint_serial_number">Serial Number</string>
+    <string name="hint_firmware_version">Firmware Version</string>
+    <string name="hint_low_stability">Low Stability (%)</string>
+    <string name="hint_high_stability">High Stability (%)</string>
+    <string name="hint_temp_raw_low">Temp Raw Low</string>
+    <string name="hint_temp_raw_high">Temp Raw High</string>
+    <string name="hint_temp_cal_low">Temp Cal Low</string>
+    <string name="hint_temp_cal_high">Temp Cal High</string>
+    <string name="hint_q1_error">Q1 Error Factor</string>
+    <string name="hint_q2_error">Q2 Error Factor</string>
+    <string name="hint_035l_error">0.35L Error Factor</string>
+    <string name="hint_100l_error">1.00L Error Factor</string>
+    <string name="hint_10l_error">10.0L Error Factor</string>
+    <string name="hint_q3_error">Q3 Error Factor</string>
+
+    <!-- Botones Inferiores -->
+    <string name="btn_config_volume">Set\nVolume\n(0X14)</string>
+    <string name="btn_user_mode">User\nMode\n(0X12)</string>
+    <string name="btn_clear_flags">Clear\nFlags\n(0X16)</string>
+    <string name="btn_autocalibration">Auto-calibration\nMode</string>
+    <string name="btn_reset_volume">Reset\nVolume</string>
+    <string name="btn_shutdown">Shutdown\nDevice\n(0X10)</string>
+    <string name="btn_save_batch">Save\nBatch</string>
+    <string name="btn_export_csv">Export\nCSV</string>
+
 
 </resources>
 

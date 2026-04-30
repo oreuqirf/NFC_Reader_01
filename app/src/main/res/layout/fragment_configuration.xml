@@ -1,373 +1,602 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/bg_main"
+    android:fillViewport="true"
     tools:context=".ui.configuration.ConfigurationFragment">
 
-    <ScrollView
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/bg_card"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_last_update"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_sub" />
+
+                <TextView
+                    android:id="@+id/textViewLastConfigurationDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="-"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_main" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/header_device_identity"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"
+            android:textColor="@color/purple_500" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_horizontal"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="horizontal"
+            android:weightSum="2"
+            android:layout_marginBottom="16dp">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Datos de Configuración (Editables):"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <!-- K_meter -->
             <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:hint="K_meter (Factor)">
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:hint="@string/hint_serial_number"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_k_meter"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="16dp"
-                android:background="?android:attr/listDivider"/>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Corrección de Temperatura:"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <!-- temp_raw_low -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:hint="Temp Raw Low">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_temp_raw_low"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- temp_raw_high -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:hint="Temp Raw High">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_temp_raw_high"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- temp_cal_low -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:hint="Temp Cal Low">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_temp_cal_low"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- temp_cal_high -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:hint="Temp Cal High">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_temp_cal_high"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="16dp"
-                android:background="?android:attr/listDivider"/>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Corrección de Caudal (Errores en %):"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <!-- FC Q1 -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:hint="FC Q1 Error (%)">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fcq_q1_error"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- FC Q2 -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:hint="FC Q2 Error (%)">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fcq_q2_error"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- FC 0.35 -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:hint="FC 0.35 L/min Error (%)">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fcq_0_35_error"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- FC 1.00 -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:hint="FC 1.00 L/min Error (%)">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fcq_1_00_error"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- FC 10.00 -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:hint="FC 10.00 L/min Error (%)">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fcq_10_lm_error"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- FC Q3 -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:hint="FC Q3 Error (%)">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_text_fcq_q3_error"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberSigned|numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="16dp"
-                android:background="?android:attr/listDivider"/>
-
-            <!-- Last Configuration Date (Timestamp) - Read Only -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/text_input_layout_last_configuration"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:hint="Última fecha de configuración">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/text_view_last_configuration_date"
+                    android:id="@+id/editTextSerialNumber"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:focusable="false"
                     android:clickable="false"
-                    android:inputType="none"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    tools:text="15/05/2024 10:30:00" />
+                    android:inputType="none" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="16dp"
-                android:background="?android:attr/listDivider"/>
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:hint="@string/hint_firmware_version"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
-            <!-- BOTONES DE ACCIÓN PRINCIPAL -->
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextFirmwareVersion"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"
+                    android:clickable="false"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
 
-            <!-- Botón de lectura (Secundario/Contorno) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2"
+            android:layout_marginBottom="8dp">
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/readConfigButton"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="12dp"
-                android:text="Leer Configuración del TAG"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:textColor="?attr/colorPrimary"
-                app:strokeColor="?attr/colorPrimary" />
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="@string/btn_read_config"
+                app:icon="@drawable/ic_nfc" />
 
-            <!-- Botón de Guardar (Primario/Relleno) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/saveConfigButton"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text="Guardar Configuración"
-                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
-                android:backgroundTint="?attr/colorPrimary"
-                android:textColor="@android:color/white" />
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="@string/btn_write_config"
+                app:icon="@drawable/ic_save" />
+        </LinearLayout>
 
-            <!-- Botón de Restablecer (Acción Destructiva/Relleno Rojo) -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/factoryResetButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text="Restablecer Configuración de Fábrica"
-                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
-                android:backgroundTint="@color/design_default_color_error"
-                android:textColor="@android:color/white" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2"
+            android:layout_marginBottom="24dp">
 
-            <!-- Botón de Cargar Archivo (Auxiliar/Contorno Secundario) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/loadFromFileButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:text="Cargar Desde Archivo"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:textColor="?attr/colorSecondary"
-                app:strokeColor="?attr/colorSecondary" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="16dp"
-                android:background="?android:attr/listDivider"/>
-
-            <TextView
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:text="Comandos Especiales de Control:"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <!-- SECCIÓN: COMANDOS ESPECIALES -->
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="@string/btn_load_file"
+                app:icon="@drawable/ic_folder_open" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/shutdownButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text="Apagado del Equipo (0x10)"
+                android:id="@+id/exportToFileButton"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:textColor="@color/design_default_color_error"
-                app:strokeColor="@color/design_default_color_error" />
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="@string/btn_export_file"
+                app:icon="@drawable/ic_share" />
+        </LinearLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/resetDeviceButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text="Reset de Volumen (0x11)"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:textColor="@color/design_default_color_error"
-                app:strokeColor="@color/design_default_color_error" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/header_general_params"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"
+            android:textColor="@color/purple_500" />
 
-            <!-- NUEVO: Botón Limpiar Banderas (0x16) -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/clearFlagsButton"
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_k_meter"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editTextKMeter"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text="Limpiar Banderas (0x16)"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:textColor="?attr/colorPrimary"
-                app:strokeColor="?attr/colorPrimary" />
+                android:inputType="numberDecimal|numberSigned" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:weightSum="2">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:hint="@string/hint_low_stability"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextLowStability"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal|numberSigned" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:hint="@string/hint_high_stability"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextHighStability"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal|numberSigned" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/header_temperature_cal"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"
+            android:textColor="@color/purple_500" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:hint="@string/hint_temp_raw_low"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextTempRawLow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal|numberSigned" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:hint="@string/hint_temp_raw_high"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextTempRawHigh"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal|numberSigned" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:weightSum="2">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:hint="@string/hint_temp_cal_low"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextTempCalLow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal|numberSigned" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:hint="@string/hint_temp_cal_high"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextTempCalHigh"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal|numberSigned" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/header_flow_error_curve"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"
+            android:textColor="@color/purple_500" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2">
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:hint="@string/hint_q1_error"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextFcqQ1Error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal|numberSigned" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:hint="@string/hint_q2_error"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextFcqQ2Error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal|numberSigned" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:weightSum="2">
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:hint="@string/hint_035l_error"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextFcq035Error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal|numberSigned" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:hint="@string/hint_100l_error"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextFcq100Error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal|numberSigned" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:weightSum="2">
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:hint="@string/hint_10l_error"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextFcq10LmError"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal|numberSigned" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:hint="@string/hint_q3_error"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextFcqQ3Error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal|numberSigned" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/header_device_commands"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="12dp"
+            android:textColor="@color/btn_danger" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2"
+            android:layout_marginBottom="8dp">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/setVolumeButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text="Set Volumen (0x14)"
-                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
-                android:backgroundTint="?attr/colorSecondary" />
+                android:layout_width="0dp"
+                android:layout_height="96dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:text="@string/btn_config_volume"
+                android:textSize="13sp"
+                android:hyphenationFrequency="none"
+                android:textColor="@color/white"
+                android:paddingHorizontal="4dp"
+                app:icon="@android:drawable/ic_menu_edit"
+                app:iconTint="@color/white"
+                app:iconGravity="textStart"
+                app:iconPadding="4dp"
+                app:cornerRadius="12dp"
+                app:backgroundTint="@color/btn_teal" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/normalModeButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text="Cambiar a Modo Normal (0x12)"
-                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
-                android:backgroundTint="?attr/colorSecondary" />
+                android:layout_width="0dp"
+                android:layout_height="96dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:text="@string/btn_user_mode"
+                android:textSize="13sp"
+                android:hyphenationFrequency="none"
+                android:textColor="@color/white"
+                android:paddingHorizontal="4dp"
+                app:icon="@android:drawable/ic_menu_preferences"
+                app:iconTint="@color/white"
+                app:iconGravity="textStart"
+                app:iconPadding="4dp"
+                app:cornerRadius="12dp"
+                app:backgroundTint="@color/btn_teal" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2"
+            android:layout_marginBottom="8dp">
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/calibrateFlowButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text="Calibración en función del Caudal (0x13)"
-                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
-                android:backgroundTint="?attr/colorSecondary" />
+                android:id="@+id/clearFlagsButton"
+                android:layout_width="0dp"
+                android:layout_height="96dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:text="@string/btn_clear_flags"
+                android:textSize="13sp"
+                android:hyphenationFrequency="none"
+                android:textColor="@color/white"
+                android:paddingHorizontal="4dp"
+                app:icon="@android:drawable/ic_menu_close_clear_cancel"
+                app:iconTint="@color/white"
+                app:iconGravity="textStart"
+                app:iconPadding="4dp"
+                app:cornerRadius="12dp"
+                app:backgroundTint="@color/btn_teal" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/enterEngineeringModeButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:text="Ingresar al Modo Ingeniería (0x15)"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:textColor="#FF9800"
-                app:strokeColor="#FF9800" />
-
+                android:layout_width="0dp"
+                android:layout_height="96dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:text="@string/btn_autocalibration"
+                android:textSize="13sp"
+                android:hyphenationFrequency="none"
+                android:textColor="#212121"
+                android:paddingHorizontal="4dp"
+                app:icon="@android:drawable/ic_menu_manage"
+                app:iconTint="#212121"
+                app:iconGravity="textStart"
+                app:iconPadding="4dp"
+                app:cornerRadius="12dp"
+                app:backgroundTint="@color/btn_warning" />
         </LinearLayout>
-    </ScrollView>
-</androidx.constraintlayout.widget.ConstraintLayout>
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2"
+            android:layout_marginBottom="32dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/resetDeviceButton"
+                android:layout_width="0dp"
+                android:layout_height="96dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:text="@string/btn_reset_volume"
+                android:textSize="13sp"
+                android:hyphenationFrequency="none"
+                android:textColor="@color/white"
+                android:paddingHorizontal="4dp"
+                app:icon="@android:drawable/ic_menu_revert"
+                app:iconTint="@color/white"
+                app:iconGravity="textStart"
+                app:iconPadding="4dp"
+                app:cornerRadius="12dp"
+                app:backgroundTint="@color/btn_danger" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/shutdownButton"
+                android:layout_width="0dp"
+                android:layout_height="96dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:text="@string/btn_shutdown"
+                android:textSize="13sp"
+                android:hyphenationFrequency="none"
+                android:textColor="@color/white"
+                android:paddingHorizontal="4dp"
+                app:icon="@android:drawable/ic_lock_power_off"
+                app:iconTint="@color/white"
+                app:iconGravity="textStart"
+                app:iconPadding="4dp"
+                app:cornerRadius="12dp"
+                app:backgroundTint="@color/btn_danger" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2"
+            android:layout_marginBottom="24dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSaveToDatabase"
+                android:layout_width="0dp"
+                android:layout_height="96dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:text="@string/btn_save_batch"
+                android:textSize="13sp"
+                android:hyphenationFrequency="none"
+                android:textColor="#212121"
+                android:paddingHorizontal="4dp"
+                app:icon="@drawable/ic_save"
+                app:iconTint="#212121"
+                app:iconGravity="textStart"
+                app:iconPadding="4dp"
+                app:cornerRadius="8dp"
+                app:backgroundTint="@color/purple_200" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnExportCsv"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="96dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:text="@string/btn_export_csv"
+                android:textSize="13sp"
+                android:hyphenationFrequency="none"
+                android:textColor="@color/purple_500"
+                android:paddingHorizontal="4dp"
+                app:icon="@drawable/ic_share"
+                app:iconTint="@color/purple_500"
+                app:iconGravity="textStart"
+                app:iconPadding="4dp"
+                app:strokeColor="@color/purple_500"
+                app:strokeWidth="1dp"
+                app:cornerRadius="8dp" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="64dp" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

@@ -15,17 +15,18 @@ import android.nfc.tech.NdefFormatable
 import android.nfc.tech.NfcV
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.navigation.findNavController
+import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
+import androidx.navigation.ui.setupWithNavController
 import com.example.nfc_reader_01.databinding.ActivityMainBinding
-import com.example.nfc_reader_01.NfcState // Asegúrate de que este import coincida con donde guardaste NfcState
 import com.example.nfc_reader_01.utils.LogManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -33,6 +34,7 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import kotlin.experimental.and
+import android.util.Log
 
 // --------------------------------------------------------------------------
 // --- CONSTANTES DE PROTOCOLO Y NDEF ---
@@ -61,7 +63,6 @@ private const val MIME_RESPONSE_TYPE = "application/x-data"
 class MainActivity : AppCompatActivity(), NfcInteractionListener {
 
     private val TAG = "NFC_MainActivity"
-    private lateinit var binding: ActivityMainBinding
     private var nfcAdapter: NfcAdapter? = null
     private lateinit var pendingIntent: PendingIntent
     private val sharedViewModel: SharedNfcViewModel by viewModels()
@@ -69,11 +70,21 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
     private var toneGenerator: ToneGenerator? = null
     private var mediaPlayer: MediaPlayer? = null
 
+    private lateinit var binding: ActivityMainBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 1. Inflar y establecer la vista
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // 2. Control de Versiones (Flavors)
+        if (BuildConfig.UI_MODE != "FULL") {
+            binding.navView.visibility = View.GONE
+        }
+
+        // 3. Inicializaciones
         initAudioSystems()
         setupNavigation()
         setupNfc()
@@ -123,60 +134,111 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
     }
 
     private fun setupNavigation() {
-        val navController = findNavController(R.id.nav_host_fragment_activity_main)
-        val appBarConfiguration = AppBarConfiguration(setOf(R.id.navigation_calibration))
-        setupActionBarWithNavController(navController, appBarConfiguration)
+        val navHostFragment = supportFragmentManager
+            .findFragmentById(R.id.nav_host_fragment_activity_main) as NavHostFragment
+        val navController = navHostFragment.navController
+
+        if (BuildConfig.UI_MODE == "FULL") {
+            val appBarConfiguration = AppBarConfiguration(
+                setOf(
+                    R.id.navigation_home,
+                    R.id.navigation_dashboard,
+                    R.id.navigation_notifications,
+                    R.id.navigation_configuration
+                )
+            )
+            setupActionBarWithNavController(navController, appBarConfiguration)
+            binding.navView.setupWithNavController(navController)
+        } else {
+            val appBarConfiguration = AppBarConfiguration(navController.graph)
+            setupActionBarWithNavController(navController, appBarConfiguration)
+        }
     }
 
     // --- IMPLEMENTACIÓN DE NFCINTERACTIONLISTENER ---
 
     override fun navigateToDashboard() { }
 
+    //override fun requestNextCommand(commandId: Byte) {
+    //    sharedViewModel.setConfigDataToWrite(null)
+    //    sharedViewModel.sendCommand(commandId)
+    //    val cmdHex = String.format("%02X", commandId)
+    //    sharedViewModel.setUiMessage(getString(R.string.status_first_scan, cmdHex))
+    //}
+
     override fun requestNextCommand(commandId: Byte) {
-        sharedViewModel.setConfigDataToWrite(null)
+        // Definimos cuáles son los comandos de ESCRITURA que requieren datos
+        val isWriteCommand = (commandId == 0x04.toByte() || // Write Config
+                commandId == 0x13.toByte() || // Calibrate Flow
+                commandId == 0x14.toByte())   // Set Volume
+
+        // SOLO limpiamos los datos si NO es un comando de escritura.
+        // Si vamos a calibrar (0x13), ¡necesitamos que los datos se queden ahí!
+        if (!isWriteCommand) {
+            sharedViewModel.setConfigDataToWrite(null)
+        }
+
+        // El resto sigue igual
         sharedViewModel.sendCommand(commandId)
         val cmdHex = String.format("%02X", commandId)
-        sharedViewModel.setUiMessage("Primer Scan: Comando 0x$cmdHex.")
+        sharedViewModel.setUiMessage(getString(R.string.status_first_scan, cmdHex))
     }
+
 
     override fun requestReadMaster() {
         sharedViewModel.setConfigDataToWrite(null)
         sharedViewModel.sendCommand(CMD_READ_ENGINEERING)
-        sharedViewModel.setUiMessage("Primer Scan: Leer Patrón (0x05).")
+        sharedViewModel.setUiMessage(getString(R.string.status_reading_pattern))
     }
 
     override fun requestWriteConfig() {
         sharedViewModel.sendCommand(CMD_WRITE_CONFIG)
-        sharedViewModel.setUiMessage("Primer Scan: Escribir Config.")
+        sharedViewModel.setUiMessage(getString(R.string.status_writing_config))
     }
 
     override fun requestSetVolume() {
         sharedViewModel.sendCommand(CMD_SET_VOLUME)
-        sharedViewModel.setUiMessage("Primer Scan: Set Volumen.")
+        sharedViewModel.setUiMessage(getString(R.string.status_setting_volume))
     }
 
     override fun requestCalibrationWrite() {
         sharedViewModel.sendCommand(CMD_CALIBRATE_FLOW)
-        sharedViewModel.setUiMessage("Primer Scan: Calibración.")
+        sharedViewModel.setUiMessage(getString(R.string.status_calibrating))
     }
 
     override fun requestEnterEngineeringMode() {
         sharedViewModel.setConfigDataToWrite(null)
         sharedViewModel.sendCommand(CMD_ENTER_ENGINEERING_MODE)
-        sharedViewModel.setUiMessage("Primer Scan: Modo Ing. (0x15).")
+        sharedViewModel.setUiMessage(getString(R.string.status_eng_mode))
     }
 
     // --- LÓGICA DE NFC Y CICLO DE VIDA ---
 
+
     private fun setupNfc() {
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
-        val intent = Intent(this, javaClass).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        val intent = Intent(this, javaClass).apply {
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+
+        // Definimos las banderas base (Siempre Mutable para NFC)
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         } else {
             PendingIntent.FLAG_UPDATE_CURRENT
         }
-        pendingIntent = PendingIntent.getActivity(this, 0, intent, flags)
+
+        // Aplicamos el salvoconducto de forma correcta para Android 14+
+        pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val options = android.app.ActivityOptions.makeBasic()
+            // ESTA es la propiedad correcta para el creador del Intent:
+            options.setPendingIntentCreatorBackgroundActivityStartMode(
+                android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+            )
+            PendingIntent.getActivity(this, 0, intent, flags, options.toBundle())
+        } else {
+            PendingIntent.getActivity(this, 0, intent, flags)
+        }
     }
 
     private fun setupViewModelObservers() {
@@ -187,7 +249,7 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
                     sharedViewModel.pendingCommand.collect { command ->
                         if (command != null) {
                             val cmdHex = String.format("%02X", command)
-                            sharedViewModel.setUiMessage("Scan: 0x$cmdHex pendiente...")
+                            sharedViewModel.setUiMessage(getString(R.string.status_scan_pending, cmdHex))
                         }
                     }
                 }
@@ -197,6 +259,7 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
                     sharedViewModel.writeStatus.collect { state ->
                         when (state) {
                             is NfcState.Success -> {
+                                // Aquí se reproduce el sonido SOLO cuando llega una respuesta exitosa
                                 playCustomSuccessSound()
                             }
                             is NfcState.Error -> {
@@ -273,8 +336,8 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
                 if (!success && nfcV != null) {
                     val formatSuccess = executeNfcVForceFormatOnlyFallback(nfcV)
                     if (formatSuccess) {
-                        sharedViewModel.setUiMessage("FALLBACK OK. Reintentar.")
-                        sharedViewModel.setStatusError("Formateo OK. Reintente.")
+                        sharedViewModel.setUiMessage(getString(R.string.status_fallback_ok))
+                        sharedViewModel.setStatusError(getString(R.string.status_fallback_ok))
                     } else {
                         sharedViewModel.setStatusError("Error total NfcV.")
                     }
@@ -291,27 +354,58 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
                     ndef.connect()
                     executeNdefReadResponse(ndef)
                 } catch (e: IOException) {
-                    sharedViewModel.setStatusError("Error NDEF I/O.")
+                    sharedViewModel.setStatusError(getString(R.string.error_ndef_io))
                 } finally {
                     try { ndef.close() } catch (_: Exception) {}
                 }
             }
 
         } catch (e: Exception) {
-            sharedViewModel.setStatusError("Error Crítico.")
+            sharedViewModel.setStatusError(getString(R.string.error_critical))
         }
     }
+
+
 
     // --- AUXILIARES ESCRITURA ---
 
     private fun createNdefCommandPayload(commandId: Byte): ByteArray? {
         val data = sharedViewModel.configDataToWrite.value
+
+        // 1. VERIFICAR QUÉ LLEGA DEL VIEWMODEL
+        if (commandId == 0x13.toByte()) {
+            val size = data?.size ?: 0
+            val hexData = data?.joinToString(" ") { "%02X".format(it) } ?: "NULL"
+            Log.e("MainActivity", "--- INTENTO CALIBRACIÓN (0x13) ---")
+            Log.e("MainActivity", "Data Size: $size (Esperado: 9)")
+            Log.e("MainActivity", "Data Content: $hexData")
+        }
+
+        val CMD_WRITE_CONFIG: Byte = 0x04
+        val CMD_CALIBRATE_FLOW: Byte = 0x13
+
         return when (commandId) {
-            CMD_WRITE_CONFIG -> if (data?.size == 96) byteArrayOf(commandId) + data else null
-            CMD_SET_VOLUME -> if (data?.size == 4) byteArrayOf(commandId) + data else null
-            // NOTA: Aquí se valida size == 9 porque CalibrationFragment envía 9 bytes (1 byte tipo + 8 bytes floats)
-            CMD_CALIBRATE_FLOW -> if (data?.size == 9) byteArrayOf(commandId) + data else null
-            else -> byteArrayOf(commandId)
+            CMD_WRITE_CONFIG -> {
+                if (data?.size == 104) {
+                    byteArrayOf(commandId) + data
+                } else null
+            }
+
+            CMD_CALIBRATE_FLOW -> {
+                // 2. VERIFICAR LA CONDICIÓN
+                if (data?.size == 11) {
+                    val packet = byteArrayOf(commandId) + data
+                    Log.e("MainActivity", ">>> PACKET OK. Enviando ${packet.size} bytes: ${packet.joinToString(" ") { "%02X".format(it) }}")
+                    packet
+                } else {
+                    Log.e("MainActivity", "!!! ERROR: Tamaño incorrecto para 0x13. Se cancela el envío.")
+                    null
+                }
+            }
+
+            else -> {
+                if (data != null && data.isNotEmpty()) byteArrayOf(commandId) + data else byteArrayOf(commandId)
+            }
         }
     }
 
@@ -322,13 +416,10 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
             ndefFormatable.connect()
             ndefFormatable.format(message)
 
-            // CORRECCIÓN CLAVE: NO enviar Success si es calibración (esperar 2do scan)
-            if (commandId == CMD_CALIBRATE_FLOW) {
-                sharedViewModel.setUiMessage("Solicitud escrita. Mantenga para confirmar...")
-                // NO llamamos a setStatusSuccess() aquí
-            } else {
-                sharedViewModel.setStatusSuccess()
-            }
+            // CAMBIO: Solo mensaje UI, NO setStatusSuccess() para evitar beep prematuro
+            val cmdHex = String.format("%02X", commandId)
+            sharedViewModel.setUiMessage(getString(R.string.status_req_sent_wait) + " (Fmt: $cmdHex)")
+
             return true
         } catch (e: IOException) {
             return false
@@ -345,13 +436,10 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
             if (!ndef.isWritable) return false
             ndef.writeNdefMessage(message)
 
-            // CORRECCIÓN CLAVE: NO enviar Success si es calibración (esperar 2do scan)
-            if (commandId == CMD_CALIBRATE_FLOW) {
-                sharedViewModel.setUiMessage("Solicitud enviada. Mantenga para confirmar...")
-                // NO llamamos a setStatusSuccess() aquí para evitar el salto de pantalla
-            } else {
-                sharedViewModel.setStatusSuccess()
-            }
+            // CAMBIO: Solo mensaje UI, NO setStatusSuccess() para evitar beep prematuro
+            val cmdHex = String.format("%02X", commandId)
+            sharedViewModel.setUiMessage(getString(R.string.status_req_sent_wait) + " (Cmd: $cmdHex)")
+
             return true
         } catch (e: Exception) {
             return false
@@ -384,16 +472,18 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
                     val cmdId = record.payload[0]
                     val data = record.payload.copyOfRange(1, record.payload.size)
 
-                    // Aquí el ViewModel procesará la respuesta y emitirá Success
-                    // haciendo que la pantalla cambie en el momento correcto
+                    // 1. Distribuir datos
                     sharedViewModel.distributeResponseData(cmdId, data)
+
+                    // 2. CAMBIO IMPORTANTE: Aquí activamos el éxito y el SONIDO
+                    sharedViewModel.setStatusSuccess()
 
                     found = true
                     break
                 }
             }
         }
-        if (!found) sharedViewModel.setStatusError("Respuesta no hallada.")
+        if (!found) sharedViewModel.setStatusError(getString(R.string.error_response_not_found))
     }
 }
 

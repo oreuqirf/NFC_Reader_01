@@ -1,14 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mobile_navigation"
-    app:startDestination="@+id/navigation_shutdown">
+    app:startDestination="@+id/navigation_home">
 
     <fragment
-        android:id="@+id/navigation_shutdown"
-        android:name="com.example.nfc_reader_01.ui.shutdown.ShutdownFragment"
-        android:label="@string/nav_title_shutdown"
-        tools:layout="@layout/fragment_shutdown" />
+        android:id="@+id/navigation_home"
+        android:name="com.example.nfc_reader_01.ui.home.HomeFragment"
+        android:label="@string/title_home"
+        tools:layout="@layout/fragment_home" />
+
+    <fragment
+        android:id="@+id/navigation_dashboard"
+        android:name="com.example.nfc_reader_01.ui.dashboard.DashboardFragment"
+        android:label="@string/title_dashboard"
+        tools:layout="@layout/fragment_dashboard" />
+
+    <fragment
+        android:id="@+id/navigation_configuration"
+        android:name="com.example.nfc_reader_01.ui.configuration.ConfigurationFragment"
+        android:label="@string/title_configuration"
+        tools:layout="@layout/fragment_configuration" />
+
+    <fragment
+        android:id="@+id/navigation_calibration"
+        android:name="com.example.nfc_reader_01.ui.calibration.CalibrationFragment"
+        android:label="@string/title_calibration"
+        tools:layout="@layout/fragment_calibration" />
+
+    <fragment
+        android:id="@+id/navigation_notifications"
+        android:name="com.example.nfc_reader_01.ui.notifications.NotificationsFragment"
+        android:label="@string/title_notifications"
+        tools:layout="@layout/fragment_notifications" />
 
 </navigation>

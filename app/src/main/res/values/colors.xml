@@ -1,12 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-<!-- Usado en el layout para backgroundTint del botón "Guardar" -->
+
+<color name="purple_200">#FFBB86FC</color>
+<color name="purple_500">#FF6200EE</color>
+<color name="purple_700">#FF3700B3</color>
+<color name="teal_200">#FF03DAC5</color>
+<color name="teal_700">#FF018786</color>
+<color name="black">#FF000000</color>
+<color name="white">#FFFFFFFF</color>
 <color name="design_default_color_primary">@color/purple_500</color>
+
+<color name="bg_main">#F5F5F5</color> <color name="bg_card">#FFFFFF</color> <color name="text_main">#212121</color> <color name="text_sub">#757575</color> <color name="btn_danger">#D32F2F</color>
+<color name="btn_warning">#FF9800</color>
+<color name="btn_teal">#018786</color>
+<color name="purple_primary">#6200EE</color>
+<color name="teal_secondary">#018786</color>
+
 </resources>

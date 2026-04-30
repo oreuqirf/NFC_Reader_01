@@ -1,0 +1,116 @@
+<resources>
+    <!-- Cadenas Generales de la App -->
+    <string name="app_name">MS206 Apagado</string>
+    <string name="app_version_rev">Rev.2.01</string>
+
+    <!-- Títulos de Menú/Navegación -->
+    <string name="title_home">Inicio</string>
+    <string name="title_dashboard">Pizarra</string>
+    <string name="title_configuration">Configuración</string>
+    <string name="title_calibration">Calibración</string>
+    <string name="title_notifications">Notificaciones</string>
+
+    <!-- Fragmento Inicio -->
+    <string name="nfc_status_placeholder">Estatus de NFC</string>
+    <string name="nfc_characteristics_placeholder">Características de la etiqueta:</string>
+    <string name="nfc_data_placeholder">Contenido de los registros:</string>
+
+    <!-- Fragmento Dashboard (Pizarra) -->
+    <string name="title_nfc_data">Datos de la Etiqueta NFC</string>
+
+    <!-- Bloque Identidad -->
+    <string name="hint_serial_number">Número de Serie</string>
+    <string name="hint_firmware_version">Versión de Firmware</string>
+    <string name="hint_last_config_date">Última Configuración</string>
+
+    <!-- Bloque Proceso -->
+    <string name="hint_volume_m3">Volumen [m³]</string>
+    <string name="hint_flow_l_h">Caudal [L/h]</string>
+    <string name="hint_temperature_c">Temperatura [°C]</string>
+    <string name="hint_battery_percent">Batería [%]</string>
+    <string name="hint_status">Estado</string>
+
+    <!-- Bloque Configuración (Lectura) -->
+    <string name="hint_direct_flow_period">Periodo Caudal Directo [min]</string>
+    <string name="hint_reverse_flow_period">Periodo Caudal Inverso [min]</string>
+    <string name="hint_no_flow_period">Periodo Sin Caudal [min]</string>
+    <string name="hint_leakage_period">Periodo con fuga [min]</string>
+
+    <!-- Bloque Ingeniería -->
+    <string name="hint_volume_l">Volumen [L]</string>
+    <string name="hint_volume_l_uncal">Volumen sin Calibrar [L]</string>
+    <string name="hint_temperature_c_uncal">Temp sin Calibrar [°C]</string>
+    <string name="hint_flow_l_h_uncal">Caudal sin Calibrar [L/h]</string>
+    <string name="hint_ttof">TToF</string>
+    <string name="hint_dtof">DToF</string>
+    <string name="hint_std_dev">StdDev</string>
+    <string name="hint_time_sec">Tiempo [seg]</string>
+    <string name="hint_chip_temperature">Temperatura Chip</string>
+    <string name="hint_lux">Lux</string>
+    <string name="hint_rak_frame_counter">RAK Frame Counter</string>
+    <string name="hint_last_trip_flow">Último Caudal (Last Trip)</string>
+
+    <string name="hint_nfc_message">Mensaje NFC</string>
+
+    <!-- Botones Dashboard -->
+    <string name="button_update_identity">Actualizar Identidad</string>
+    <string name="button_update_process">Actualizar Proceso</string>
+    <string name="button_update_config">Actualizar Configuración</string>
+    <string name="button_update_engineering">Actualizar Ingeniería</string>
+
+    <!-- Fragmento Calibración (Simplificado) -->
+    <string name="title_calibration_simple">Calibración del Equipo</string>
+    <string name="btn_read_pattern">LEER PATRÓN (0x05)</string>
+    <string name="btn_transfer">TRANSFERIR (0x13)</string>
+    <string name="hint_vol_detected">Volumen Detectado (L)</string>
+    <string name="hint_temp_detected">Temperatura Detectada (°C)</string>
+
+    <string name="instr_step_1">Acerque al equipo PATRÓN</string>
+    <string name="label_detected_point">Punto Detectado:</string>
+    <string name="text_placeholder_dash">---</string>
+    <string name="instr_step_2">Acerque al equipo BAJO PRUEBA</string>
+    <string name="btn_cancel_read">Cancelar / Leer Nuevo Patrón</string>
+
+    <string name="success_title">¡Transferencia Exitosa!</string>
+    <string name="success_desc">Datos guardados en el equipo.</string>
+    <string name="btn_calibrate_next">Calibrar Siguiente Equipo</string>
+
+
+    <string name="toast_transferring">Transfiriendo...</string>
+    <string name="toast_invalid_values">Valores inválidos</string>
+    <string name="toast_pattern_read_format">Patrón Leído: %1$s</string>
+    <string name="toast_error_reading">Error lectura patrón.</string>
+
+    <string name="cal_type_temp_only">Solo Temperatura</string>
+    <string name="cal_type_flow_10l">Caudal 10 L/m (600 L/h)</string>
+    <string name="cal_type_flow_1l">Caudal 1 L/m (60 L/h)</string>
+    <string name="cal_type_flow_035l">Caudal 0.35 L/m (21 L/h)</string>
+    <string name="cal_type_flow_q2">Caudal Q2 (10 L/h)</string>
+    <string name="cal_type_flow_q1">Caudal Q1 (6 L/h)</string>
+    <string name="cal_type_flow_q3">Caudal Q3 (2500 L/h)</string>
+    <string name="cal_type_unknown">Desconocido / Temp</string>
+
+    <string name="status_waiting_nfc">Esperando conexión NFC...</string>
+    <string name="error_tag_empty">Error: Etiqueta vacía o sin datos.</string>
+    <string name="log_nfc_detected">Etiqueta NFC detectada. ID: %1$s</string>
+    <string name="log_init_read">Iniciando protocolo de lectura...</string>
+
+    <string name="msg_read_success_identity">LECTURA EXITOSA (Identidad 0x81).</string>
+    <string name="msg_read_success_process">LECTURA EXITOSA (Proceso 0x82).</string>
+    <string name="msg_read_success_engineering">LECTURA EXITOSA (Ingeniería 0x85).</string>
+    <string name="msg_read_success_config">LECTURA EXITOSA (Config 0x83).</string>
+    <string name="msg_write_success">ESCRITURA EXITOSA (0x84).</string>
+    <string name="msg_reset_success">RESET DE FÁBRICA EXITOSO (0x8A).</string>
+    <string name="msg_calibration_success">TRANSFERENCIA DE CALIBRACIÓN EXITOSA.</string>
+
+    <string name="error_protocol_unknown">ERROR DE PROTOCOLO: Código desconocido 0x%1$s</string>
+
+
+    <string name="shutdown_status_ready">Listo para apagar el equipo</string>
+    <string name="shutdown_status_sending">Enviando comando...</string>
+    <string name="btn_execute_shutdown">EJECUTAR APAGADO</string>
+    <string name="toast_requesting_shutdown">Solicitando apagado...</string>
+
+    <string name="nav_title_shutdown">Apagado de Equipo</string>
+
+</resources>

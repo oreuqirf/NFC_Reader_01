@@ -1,45 +1,23 @@
 package com.example.nfc_reader_01.data
 
-import android.nfc.NdefMessage
-import android.nfc.NdefRecord
+import android.util.Log
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
-import java.nio.charset.Charset
-import java.util.concurrent.TimeUnit
-import kotlin.experimental.and
 
-
-// =================================================================
-// ESTRUCTURAS DE DATOS (DATA CLASSES)
-// =================================================================
+// -------------------------------------------------------------------------
+// 1. DATA CLASSES (Sin cambios)
+// -------------------------------------------------------------------------
 
 data class IdentityData(
     val deviceId: Long,
     val firmwareVersion: String,
+    val hardwareVersion: String,
     val lastConfigurationDate: String
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-        other as IdentityData
-        if (deviceId != other.deviceId) return false
-        if (firmwareVersion != other.firmwareVersion) return false
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = deviceId.hashCode()
-        result = 31 * result + firmwareVersion.hashCode()
-        return result
-    }
-}
-
+)
 
 data class ProcessData(
-    val volume: Int,
+    val volume: Long,
     val flowRate: Int,
     val temperature: Int,
     val battery: Int,
@@ -47,299 +25,193 @@ data class ProcessData(
     val directFlowPeriod: Int,
     val reverseFlowPeriod: Int,
     val noFlowPeriod: Int,
-    val leakageFlowPeriod: Int,
+    val leakageFlowPeriod: Int
 )
-
 
 data class ConfigurationData(
     val kMeter: Float,
-    val lowTempUnscaled: Float,
-    val highTempUnscaled: Float,
-    val lowTempCorrected: Float,
-    val highTempCorrected: Float,
-    val fcQ1_flow: Float,
-    val fcQ1_error: Float,
-    val fcQ1_temperature: Float,
-    val fcQ2_flow: Float,
-    val fcQ2_error: Float,
-    val fcQ2_temperature: Float,
-    val fcQ0_35_flow: Float,
-    val fcQ0_35_error: Float,
-    val fcQ0_35_temperature: Float,
-    val fcQ1_00_flow: Float,
-    val fcQ1_00_error: Float,
-    val fcQ1_00_temperature: Float,
-    val fcQ10_00_flow: Float,
-    val fcQ10_00_error: Float,
-    val fcQ10_00_temperature: Float,
-    val fcQ3_flow: Float,
-    val fcQ3_error: Float,
-    val fcQ3_temperature: Float,
-    val lastConfigurationDate: Int,
+    val low_stability: Float,   // 0-100%
+    val high_stability: Float,    // 0-100%
+    val lowTempUnscaled: Float, val highTempUnscaled: Float,
+    val lowTempCorrected: Float, val highTempCorrected: Float,
+    val fcQ1_flow: Float, val fcQ1_temperature: Float, val fcQ1_error: Float,
+    val fcQ2_flow: Float, val fcQ2_temperature: Float, val fcQ2_error: Float,
+    val fcQ0_35_flow: Float, val fcQ0_35_temperature: Float, val fcQ0_35_error: Float,
+    val fcQ1_00_flow: Float, val fcQ1_00_temperature: Float, val fcQ1_00_error: Float,
+    val fcQ10_00_flow: Float, val fcQ10_00_temperature: Float, val fcQ10_00_error: Float,
+    val fcQ3_flow: Float, val fcQ3_temperature: Float, val fcQ3_error: Float,
+    val lastConfigurationDate: Int
 )
 
-// ---------------------------------------------------------
-// CAMBIO 1: Agregado campo 'temperature' al final
-// ---------------------------------------------------------
 data class EngineeringData(
-    val volumeLiters: Int,      // Volumen en litros
-    val volumeLitersUncal: Int, // Volumen en litros sin calibrar
-    val temperatureUncal: Int,  // Temperatura sin calibrar
-    val flowUncal: Int,         // caudal sin calibrar
-    val ttof: Int,              // TToF
-    val dtof: Int,              // DToF
-    val stdDev: Int,            // Desviacion estandard
-    val time: Int,              // Tiempo
-    val chipTemperature: Int,   // Temperatura interna
-    val lux: Int,               // Luxs
-    val rakFrameCounter: Int,   // RAK Frame Counter
-    val lastTripFlow: Int,      // Ultimo Caudal (Last Trip Flow)
-    val temperature: Int        // NUEVO: Temperatura calibrada (al final)
+    val volumeLiters: Int,
+    val volumeLitersUncal: Int,
+    val temperatureUncal: Int,
+    val flowUncal: Int,
+    val ttof: Int,
+    val dtof: Int,
+    val stdDev: Int,
+    val time: Int,
+    val lux_threshold: Int,
+    val lux: Int,
+    val rakFrameCounter: Int,
+    val lastTripFlow: Int,
+    val temperature: Int
 )
 
-
-data class NdefRecordsData(
-    val identityData: IdentityData? = null,
-    val processData: ProcessData? = null,
-    val configData: ConfigurationData? = null,
-    val engineeringData: EngineeringData? = null,
-    val rawNdefRecords: List<NdefRecord>? = null
-)
-
-
-// =================================================================
-// PARSER BINARIO Y CREADOR DE COMANDOS NDEF
-// =================================================================
+// -------------------------------------------------------------------------
+// 2. OBJETO PARSER (CORREGIDO)
+// -------------------------------------------------------------------------
 
 object NfcDataParser {
 
-    val DEFAULT_CONFIG_DATA = ConfigurationData(
-        kMeter = 0.0f,
-        lowTempUnscaled = 0.0f,
-        highTempUnscaled = 0.0f,
-        lowTempCorrected = 0.0f,
-        highTempCorrected = 0.0f,
-        fcQ1_flow = 0.0f,
-        fcQ1_error = 0.0f,
-        fcQ1_temperature = 0.0f,
-        fcQ2_flow = 0.0f,
-        fcQ2_error = 0.0f,
-        fcQ2_temperature = 0.0f,
-        fcQ0_35_flow = 0.0f,
-        fcQ0_35_error = 0.0f,
-        fcQ0_35_temperature = 0.0f,
-        fcQ1_00_flow = 0.0f,
-        fcQ1_00_error = 0.0f,
-        fcQ1_00_temperature = 0.0f,
-        fcQ10_00_flow = 0.0f,
-        fcQ10_00_error = 0.0f,
-        fcQ10_00_temperature = 0.0f,
-        fcQ3_flow = 0.0f,
-        fcQ3_error = 0.0f,
-        fcQ3_temperature = 0.0f,
-        lastConfigurationDate = 0,
-    )
+    private const val TAG = "NfcDataParser"
 
-    private val COMMAND_ID_DATA: Byte = 0x01.toByte()
-    private val COMMAND_PROCESS_DATA: Byte = 0x02.toByte()
-    private val COMMAND_CONFIG_DATA: Byte = 0x03.toByte()
-    private val COMMAND_WRITE_CONFIG: Byte = 0x04.toByte()
-    private val COMMAND_ENGINEERING_DATA: Byte = 0x05.toByte()
-    const val COMMAND_ID_SAVE_CONFIG: Byte = 0x04
+    // --- 0x01 IDENTIDAD ---
+    fun parseIdentityData(data: ByteArray): IdentityData {
+        // Payload real: 12 bytes
+        if (data.size < 12) throw IllegalArgumentException("Datos insuficientes Identidad")
+        val buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN)
 
-    private val MIME_TYPE_COMMAND = "application/x-cmd"
-    private val MIME_TYPE_DATA = "application/x-data"
-
-
-    // -----------------------------------------------------------------------
-    // --- PARSING DE RESPUESTAS (0x81, 0x82, 0x83) ---
-    // -----------------------------------------------------------------------
-
-    fun parseProcessData(processBytes: ByteArray): ProcessData {
-        if (processBytes.size != 36) {
-            throw IllegalArgumentException("El tamaño de datos de proceso debe ser 36 bytes (9 Ints). Recibido: ${processBytes.size}")
+        // CORRECCIÓN: Solo saltar si hay byte extra Y coincide con header
+        if (data.size > 12 && data[0] == 0x81.toByte()) {
+            buffer.position(1)
+        } else {
+            buffer.position(0)
         }
 
-        val buffer = ByteBuffer.wrap(processBytes).order(ByteOrder.LITTLE_ENDIAN)
+        val deviceId = buffer.int.toLong() and 0xFFFFFFFFL
+        val fwRaw = buffer.int
+        val fwMajor = (fwRaw shr 16) and 0xFF
+        val fwMinor = (fwRaw shr 8) and 0xFF
+        val fwPatch = fwRaw and 0xFF
+        val fwVersion = String.format(Locale.US, "Rev %d.%02d.%02d", fwMajor, fwMinor, fwPatch)
+        val timestamp = buffer.int
+        val date = java.util.Date(timestamp.toLong() * 1000)
+        val sdf = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
 
-        return ProcessData(
-            volume = buffer.getInt(),
-            flowRate = buffer.getInt(),
-            temperature = buffer.getInt(),
-            battery = buffer.getInt(),
-            statusFlags = buffer.getInt(),
-            directFlowPeriod = buffer.getInt(),
-            reverseFlowPeriod = buffer.getInt(),
-            noFlowPeriod = buffer.getInt(),
-            leakageFlowPeriod = buffer.getInt()
-        )
+        return IdentityData(deviceId, fwVersion, "-", sdf.format(date))
     }
 
-    fun parseConfigData(configBytes: ByteArray): ConfigurationData {
-        if (configBytes.size != 96) {
-            throw IllegalArgumentException("El tamaño de datos de configuración debe ser 96 bytes (23F + 1I). Recibido: ${configBytes.size}")
+    // --- 0x02 PROCESO ---
+    fun parseProcessData(data: ByteArray): ProcessData {
+        // Payload real: 36 bytes
+        if (data.size < 36) throw IllegalArgumentException("Datos insuficientes Proceso")
+        val buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN)
+
+        // CORRECCIÓN: Solo saltar si hay byte extra Y coincide con header
+        if (data.size > 36 && data[0] == 0x82.toByte()) {
+            buffer.position(1)
+        } else {
+            buffer.position(0)
         }
 
-        val buffer = ByteBuffer.wrap(configBytes).order(ByteOrder.LITTLE_ENDIAN)
+        val volume = buffer.int.toLong() and 0xFFFFFFFFL
+        val flowRate = buffer.int
+        val temperature = buffer.int
+        val battery = buffer.int
+        val statusFlags = buffer.int
+        val directTime = buffer.int
+        val reverseTime = buffer.int
+        val noFlowTime = buffer.int
+        val leakageTime = buffer.int
+
+        return ProcessData(volume, flowRate, temperature, battery, statusFlags, directTime, reverseTime, noFlowTime, leakageTime)
+    }
+
+    // --- 0x03 CONFIGURACIÓN ---
+    fun parseConfigData(data: ByteArray): ConfigurationData {
+        // Payload real: 106 bytes
+        if (data.size < 104) throw IllegalArgumentException("Datos insuficientes Configuración (${data.size} bytes)")
+        val buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN)
+
+        // CORRECCIÓN: Lógica unificada
+        if (data.size > 100 && data[0] == 0x83.toByte()) {
+            buffer.position(1)
+        } else {
+            buffer.position(0)
+        }
+
+        val kMeter = buffer.float
+
+        val stability = buffer.float
+        val stopTime  = buffer.float
+
+        val lowTempUnscaled = buffer.float; val highTempUnscaled = buffer.float
+        val lowTempCorrected = buffer.float; val highTempCorrected = buffer.float
+
+        // Q1
+        val q1_flow = buffer.float; val q1_error = buffer.float; val q1_temp = buffer.float
+        // Q2
+        val q2_flow = buffer.float; val q2_error = buffer.float; val q2_temp = buffer.float
+        // 0.35
+        val q035_flow = buffer.float; val q035_error = buffer.float; val q035_temp = buffer.float
+        // 1.00
+        val q100_flow = buffer.float; val q100_error = buffer.float; val q100_temp = buffer.float
+        // 10.00
+        val q10_flow = buffer.float; val q10_error = buffer.float; val q10_temp = buffer.float
+        // Q3
+        val q3_flow = buffer.float; val q3_error = buffer.float; val q3_temp = buffer.float
+
+        val lastDate = buffer.int
 
         return ConfigurationData(
-            kMeter = buffer.getFloat(),
-            lowTempUnscaled = buffer.getFloat(),
-            highTempUnscaled = buffer.getFloat(),
-            lowTempCorrected = buffer.getFloat(),
-            highTempCorrected = buffer.getFloat(),
-            fcQ1_flow = buffer.getFloat(),
-            fcQ1_error = buffer.getFloat(),
-            fcQ1_temperature = buffer.getFloat(),
-            fcQ2_flow = buffer.getFloat(),
-            fcQ2_error = buffer.getFloat(),
-            fcQ2_temperature = buffer.getFloat(),
-            fcQ0_35_flow = buffer.getFloat(),
-            fcQ0_35_error = buffer.getFloat(),
-            fcQ0_35_temperature = buffer.getFloat(),
-            fcQ1_00_flow = buffer.getFloat(),
-            fcQ1_00_error = buffer.getFloat(),
-            fcQ1_00_temperature = buffer.getFloat(),
-            fcQ10_00_flow = buffer.getFloat(),
-            fcQ10_00_error = buffer.getFloat(),
-            fcQ10_00_temperature = buffer.getFloat(),
-            fcQ3_flow = buffer.getFloat(),
-            fcQ3_error = buffer.getFloat(),
-            fcQ3_temperature = buffer.getFloat(),
-            lastConfigurationDate = buffer.getInt(),
+            kMeter, stability, stopTime,
+            lowTempUnscaled, highTempUnscaled, lowTempCorrected, highTempCorrected,
+            q1_flow, q1_temp, q1_error,
+            q2_flow, q2_temp, q2_error,
+            q035_flow, q035_temp, q035_error,
+            q100_flow, q100_temp, q100_error,
+            q10_flow, q10_temp, q10_error,
+            q3_flow, q3_temp, q3_error,
+            lastDate
         )
     }
 
-    fun parseIdentityData(identityBytes: ByteArray): IdentityData {
-        val expectedSize = 12
-        if (identityBytes.size != expectedSize) {
-            throw IllegalArgumentException("El tamaño de datos de identidad (0x81) debe ser $expectedSize bytes (3 x Int). Recibido: ${identityBytes.size}")
-        }
-
-        val buffer = ByteBuffer.wrap(identityBytes).order(ByteOrder.LITTLE_ENDIAN)
-
-        val signedDeviceIdRaw = buffer.getInt()
-        val deviceIdRaw = signedDeviceIdRaw.toLong() and 0xFFFFFFFFL
-
-        val firmwareVersionRaw    = buffer.getInt()
-        val firmwareVersionLast   = (firmwareVersionRaw and 0xFF).toByte()
-        val firmwareVersionMinor  = (firmwareVersionRaw shr 8 and 0xFF).toByte()
-        val firmwareVersionMain   = (firmwareVersionRaw shr 16 and 0xFF).toByte()
-        val firmwareVersionString = String.format(Locale.US, "%d.%d.%d", firmwareVersionMain, firmwareVersionMinor, firmwareVersionLast)
-
-        val configTimestamp = buffer.getInt()
-
-        val dateMillis = configTimestamp.toLong() * 1000
-        val date = Date(dateMillis)
-        val formatter = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault())
-        val formattedDate = formatter.format(date)
-
-        return IdentityData(
-            deviceId = deviceIdRaw,
-            firmwareVersion = firmwareVersionString,
-            lastConfigurationDate = formattedDate,
-        )
-    }
-
-    // ---------------------------------------------------------
-    // CAMBIO 2: Actualizado tamaño esperado a 52 bytes y lectura
-    // ---------------------------------------------------------
-    fun parseEngineeringData(engineeringBytes: ByteArray): EngineeringData {
-        // Ahora esperamos 52 bytes (13 enteros de 4 bytes)
-        val expectedSize = 52
-        if (engineeringBytes.size != expectedSize) {
-            throw IllegalArgumentException("El tamaño de datos de Ingenieria debe ser $expectedSize bytes. Recibido: ${engineeringBytes.size}")
-        }
-
-        val buffer = ByteBuffer.wrap(engineeringBytes).order(ByteOrder.LITTLE_ENDIAN)
-
-        return EngineeringData(
-            volumeLiters = buffer.getInt(),
-            volumeLitersUncal = buffer.getInt(),
-            temperatureUncal = buffer.getInt(),
-            flowUncal = buffer.getInt(),
-            ttof = buffer.getInt(),
-            dtof = buffer.getInt(),
-            stdDev = buffer.getInt(),
-            time = buffer.getInt(),
-            chipTemperature = buffer.getInt(),
-            lux = buffer.getInt(),
-            rakFrameCounter = buffer.getInt(),
-            lastTripFlow = buffer.getInt(),
-            temperature = buffer.getInt() // NUEVO: Lectura de temperatura al final
-        )
-    }
-
-    // -----------------------------------------------------------------------
-    // --- CREACIÓN DE COMANDOS (0x01, 0x02, 0x03, 0x04) ---
-    // -----------------------------------------------------------------------
-
+    // --- 0x04 SERIALIZAR ---
     fun serializeConfigData(config: ConfigurationData): ByteArray {
-
-        val currentEpochSeconds = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()).toInt()
-
-        val buffer = ByteBuffer.allocate(96).order(ByteOrder.LITTLE_ENDIAN)
-
+        val buffer = ByteBuffer.allocate(104).order(ByteOrder.LITTLE_ENDIAN)
         buffer.putFloat(config.kMeter)
-        buffer.putFloat(config.lowTempUnscaled)
-        buffer.putFloat(config.highTempUnscaled)
-        buffer.putFloat(config.lowTempCorrected)
-        buffer.putFloat(config.highTempCorrected)
-        buffer.putFloat(config.fcQ1_flow)
-        buffer.putFloat(config.fcQ1_error)
-        buffer.putFloat(config.fcQ1_temperature)
-        buffer.putFloat(config.fcQ2_flow)
-        buffer.putFloat(config.fcQ2_error)
-        buffer.putFloat(config.fcQ2_temperature)
-        buffer.putFloat(config.fcQ0_35_flow)
-        buffer.putFloat(config.fcQ0_35_error)
-        buffer.putFloat(config.fcQ0_35_temperature)
-        buffer.putFloat(config.fcQ1_00_flow)
-        buffer.putFloat(config.fcQ1_00_error)
-        buffer.putFloat(config.fcQ1_00_temperature)
-        buffer.putFloat(config.fcQ10_00_flow)
-        buffer.putFloat(config.fcQ10_00_error)
-        buffer.putFloat(config.fcQ10_00_temperature)
-        buffer.putFloat(config.fcQ3_flow)
-        buffer.putFloat(config.fcQ3_error)
-        buffer.putFloat(config.fcQ3_temperature)
-        buffer.putInt(currentEpochSeconds)
+
+        buffer.putFloat(config.low_stability)
+        buffer.putFloat(config.high_stability)
+
+        buffer.putFloat(config.lowTempUnscaled); buffer.putFloat(config.highTempUnscaled)
+        buffer.putFloat(config.lowTempCorrected); buffer.putFloat(config.highTempCorrected)
+
+        buffer.putFloat(config.fcQ1_flow); buffer.putFloat(config.fcQ1_error); buffer.putFloat(config.fcQ1_temperature)
+        buffer.putFloat(config.fcQ2_flow); buffer.putFloat(config.fcQ2_error); buffer.putFloat(config.fcQ2_temperature)
+        buffer.putFloat(config.fcQ0_35_flow); buffer.putFloat(config.fcQ0_35_error); buffer.putFloat(config.fcQ0_35_temperature)
+        buffer.putFloat(config.fcQ1_00_flow); buffer.putFloat(config.fcQ1_00_error); buffer.putFloat(config.fcQ1_00_temperature)
+        buffer.putFloat(config.fcQ10_00_flow); buffer.putFloat(config.fcQ10_00_error); buffer.putFloat(config.fcQ10_00_temperature)
+        buffer.putFloat(config.fcQ3_flow); buffer.putFloat(config.fcQ3_error); buffer.putFloat(config.fcQ3_temperature)
+
+        buffer.putInt(config.lastConfigurationDate)
         return buffer.array()
     }
 
-    fun createReadCommandMessage(commandId: Byte): NdefMessage {
-        val payload = byteArrayOf(commandId)
-        val commandRecord = NdefRecord.createMime(MIME_TYPE_COMMAND, payload)
-        return NdefMessage(commandRecord)
-    }
+    // --- 0x05 INGENIERÍA ---
+    fun parseEngineeringData(data: ByteArray): EngineeringData {
+        // Payload real: 48 bytes (mínimo)
+        if (data.size < 48) throw IllegalArgumentException("Datos insuficientes Ingeniería")
+        val buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN)
 
-    fun createWriteConfigMessage(writeData: ByteArray): NdefMessage {
-        if (writeData.size != 96) {
-            throw IllegalArgumentException("El payload de datos de configuración debe ser de 96 bytes. Recibido: ${writeData.size}")
+        // CORRECCIÓN: Solo saltar si hay byte extra Y coincide con header
+        if (data.size > 48 && data[0] == 0x85.toByte()) {
+            buffer.position(1)
+        } else {
+            buffer.position(0)
         }
 
-        val fullPayload = ByteArray(1 + writeData.size)
-        fullPayload[0] = COMMAND_WRITE_CONFIG
-        System.arraycopy(writeData, 0, fullPayload, 1, writeData.size)
+        val vol = buffer.int; val volU = buffer.int; val tempU = buffer.int; val flowU = buffer.int
+        val ttof = buffer.int; val dtof = buffer.int; val std = buffer.int; val time = buffer.int
 
-        if (fullPayload.size != 97) {
-            throw IllegalStateException("Error de protocolo: El payload total para el Comando 0x04 debe ser de 97 bytes, pero fue ${fullPayload.size}")
-        }
+        val luxTh = if (buffer.remaining() >= 4) buffer.int else 0
+        val lux = if (buffer.remaining() >= 4) buffer.int else 0
+        val rak = if (buffer.remaining() >= 4) buffer.int else 0
+        val last = if (buffer.remaining() >= 4) buffer.int else 0
+        val temp = if (buffer.remaining() >= 4) buffer.int else 0
 
-        val record = NdefRecord.createMime(MIME_TYPE_COMMAND, fullPayload)
-        return NdefMessage(arrayOf(record))
+        return EngineeringData(vol, volU, tempU, flowU, ttof, dtof, std, time, luxTh, lux, rak, last, temp)
     }
-
-
-    fun parseDataPayload(record: NdefRecord): String? {
-        if (record.tnf == NdefRecord.TNF_MIME_MEDIA && String(record.type) == MIME_TYPE_DATA) {
-            return try {
-                String(record.payload, Charset.forName("UTF-8"))
-            } catch (e: Exception) {
-                null
-            }
-        }
-        return null
-    }
-
 }

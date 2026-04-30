@@ -8,6 +8,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
@@ -30,14 +31,21 @@ import java.nio.ByteOrder
 import java.util.Locale
 import kotlin.ExperimentalStdlibApi
 
+import kotlinx.coroutines.delay
+
 @OptIn(ExperimentalStdlibApi::class)
 class CalibrationFragment : Fragment() {
 
     companion object {
         private const val TAG = "CalibrationFragment"
-        private const val ENGINEERING_PAYLOAD_SIZE = 52
-        private const val CMD_READ_ENGINEERING: Byte = 0x05
+        private const val MIN_ENGINEERING_PAYLOAD_SIZE = 48
 
+        // Comandos
+        private const val CMD_READ_ENGINEERING: Byte = 0x05
+        private const val CMD_CALIBRATE_FLOW: Byte = 0x13
+        private const val CMD_RESET_VOLUME: Byte = 0x11
+
+        // Índices
         private const val IDX_TEMP = 0
         private const val IDX_FLOW_10L = 1
         private const val IDX_FLOW_1L = 2
@@ -45,6 +53,11 @@ class CalibrationFragment : Fragment() {
         private const val IDX_FLOW_Q2 = 4
         private const val IDX_FLOW_Q1 = 5
         private const val IDX_FLOW_Q3 = 6
+
+        // --- NUEVO: ESTADOS DEL BOTÓN RESET ---
+        private const val STATE_IDLE = 0    // Rojo (Normal)
+        private const val STATE_PENDING = 1 // Gris (Esperando acercar)
+        private const val STATE_SUCCESS = 2 // Verde (Éxito)
     }
 
     private var _binding: FragmentCalibrationBinding? = null
@@ -52,10 +65,19 @@ class CalibrationFragment : Fragment() {
 
     private val sharedViewModel: SharedNfcViewModel by activityViewModels()
     private var listener: NfcInteractionListener? = null
+
     private var detectedCalibrationType: Byte = 0
 
-    // CORRECCIÓN LÓGICA: Bandera para saber si estamos esperando el resultado de la transferencia
+    // SEMÁFORO DE SEGURIDAD (Para calibración principal)
+    private var isTransactionLocked = false
     private var waitingForTransferResult = false
+
+    // --- NUEVO: Estado del botón Reset ---
+    private var resetVolumeState = STATE_IDLE
+
+    private var isManualMode = false
+    private var dynamicManualOptions: List<Pair<String, Int>> = emptyList()
+    private var selectedManualId: Int? = null
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -75,20 +97,37 @@ class CalibrationFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        binding.textVersion.text = com.example.nfc_reader_01.BuildConfig.VERSION_NAME
+
+        setupDropdownAdapter()
+        setManualMode(false)
         showStep1()
         setupListeners()
         setupObservers()
-        setupLanguageButtons(view)
+        setupLanguageButtons()
     }
 
-    private fun setupLanguageButtons(view: View) {
+    // ... (setupDropdownAdapter, setupLanguageButtons, setAppLocale se mantienen IGUAL) ...
+
+    private fun setupDropdownAdapter() {
+        val orderedIds = listOf(IDX_TEMP, IDX_FLOW_Q1, IDX_FLOW_Q2, IDX_FLOW_035L, IDX_FLOW_1L, IDX_FLOW_10L, IDX_FLOW_Q3)
+        dynamicManualOptions = orderedIds.map { id -> Pair(getCalibrationTypeName(id), id) }
+        val optionNames = dynamicManualOptions.map { it.first }
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, optionNames)
+        binding.autoCompleteFlowSelector.setAdapter(adapter)
+        binding.autoCompleteFlowSelector.setOnItemClickListener { _, _, position, _ ->
+            selectedManualId = dynamicManualOptions[position].second
+            binding.inputLayoutManualFlow.error = null
+        }
+    }
+
+    private fun setupLanguageButtons() {
         try {
             binding.btnLangEs.setOnClickListener { setAppLocale("es") }
             binding.btnLangEn.setOnClickListener { setAppLocale("en") }
             binding.btnLangZh.setOnClickListener { setAppLocale("zh-CN") }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error configurando botones de idioma: ${e.message}")
-        }
+        } catch (e: Exception) { Log.e(TAG, "Error idiomas: ${e.message}") }
     }
 
     private fun setAppLocale(languageCode: String) {
@@ -96,21 +135,48 @@ class CalibrationFragment : Fragment() {
         AppCompatDelegate.setApplicationLocales(appLocale)
     }
 
-    // --- MANEJO DE VISTAS (PASOS) ---
+    private fun setManualMode(enableManual: Boolean) {
+        isManualMode = enableManual
+        val activeColor = ContextCompat.getColor(requireContext(), R.color.purple_500)
+        val inactiveColor = Color.GRAY
+        showStep1()
+        if (isManualMode) {
+            binding.inputLayoutManualFlow.visibility = View.VISIBLE
+            binding.btnReadMaster.text = getString(R.string.btn_continue_manual)
+            binding.btnReadMaster.icon = null
+            binding.btnModeManual.backgroundTintList = ColorStateList.valueOf(activeColor)
+            binding.btnModeManual.setTextColor(Color.WHITE)
+            binding.btnModeAuto.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
+            binding.btnModeAuto.setTextColor(inactiveColor)
+            binding.textDetectedFlowType.text = "Manual Mode"
+            binding.autoCompleteFlowSelector.text.clear()
+            selectedManualId = null
+        } else {
+            binding.inputLayoutManualFlow.visibility = View.GONE
+            binding.btnReadMaster.text = getString(R.string.btn_read_pattern)
+            binding.btnModeAuto.backgroundTintList = ColorStateList.valueOf(activeColor)
+            binding.btnModeAuto.setTextColor(Color.WHITE)
+            binding.btnModeManual.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
+            binding.btnModeManual.setTextColor(inactiveColor)
+            binding.textDetectedFlowType.text = "-"
+        }
+    }
 
     private fun showStep1() {
         binding.layoutStep1.visibility = View.VISIBLE
         binding.layoutStep2.visibility = View.GONE
         binding.layoutSuccess.visibility = View.GONE
-
-        binding.textDetectedFlowType.text = getString(R.string.text_placeholder_dash)
         binding.editTextVolPatron.setText("")
         binding.editTextTempPatron.setText("")
-
+        binding.autoCompleteFlowSelector.setText("")
+        selectedManualId = null
         setButtonState(binding.btnReadMaster, true)
 
-        // CORRECCIÓN: Al volver al paso 1, no estamos esperando transferencia
         waitingForTransferResult = false
+        isTransactionLocked = false
+
+        // --- NUEVO: Resetear estado del botón de volumen al volver al inicio ---
+        updateResetButtonUI(STATE_IDLE)
     }
 
     private fun showStep2() {
@@ -118,90 +184,202 @@ class CalibrationFragment : Fragment() {
         binding.layoutStep2.visibility = View.VISIBLE
         binding.layoutSuccess.visibility = View.GONE
         setButtonState(binding.btnStartCalibration, true)
-
-        // Estamos en paso 2, pero aún no se ha pulsado el botón de transferir
         waitingForTransferResult = false
+        isTransactionLocked = false
     }
 
     private fun showSuccess() {
         binding.layoutStep1.visibility = View.GONE
         binding.layoutStep2.visibility = View.GONE
         binding.layoutSuccess.visibility = View.VISIBLE
-        // Proceso terminado
         waitingForTransferResult = false
+    }
+
+    private fun prepareNextDeviceSameValues() {
+        isTransactionLocked = false
+        waitingForTransferResult = false
+        setButtonState(binding.btnStartCalibration, true)
+        binding.layoutStep1.visibility = View.GONE
+        binding.layoutStep2.visibility = View.VISIBLE
+        binding.layoutSuccess.visibility = View.GONE
+        Toast.makeText(context, "Listo para el siguiente equipo", Toast.LENGTH_SHORT).show()
     }
 
     private fun setButtonState(button: MaterialButton, isEnabled: Boolean) {
         button.isEnabled = isEnabled
         val primaryColor = ContextCompat.getColor(requireContext(), R.color.purple_500)
         val disabledColor = Color.GRAY
-        if (isEnabled) {
-            button.backgroundTintList = ColorStateList.valueOf(primaryColor)
-        } else {
-            button.backgroundTintList = ColorStateList.valueOf(disabledColor)
+        button.backgroundTintList = ColorStateList.valueOf(if (isEnabled) primaryColor else disabledColor)
+    }
+
+
+
+    // --- FUNCIÓN ACTUALIZADA CON TEXTOS TRADUCIBLES ---
+    private fun updateResetButtonUI(state: Int) {
+        resetVolumeState = state
+        val btn = binding.btnResetVolume
+
+        when (state) {
+            STATE_IDLE -> {
+                // Estado Normal: Rojo
+                val redColor = Color.parseColor("#D32F2F")
+                btn.isEnabled = true
+                btn.strokeColor = ColorStateList.valueOf(redColor)
+                btn.setTextColor(redColor)
+                btn.iconTint = ColorStateList.valueOf(redColor)
+                btn.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
+
+                // USAMOS getString PARA SOPORTAR IDIOMAS
+                btn.text = getString(R.string.btn_reset_volume)
+            }
+            STATE_PENDING -> {
+                // Estado Pendiente: Gris
+                val grayColor = Color.GRAY
+                btn.isEnabled = true
+                btn.strokeColor = ColorStateList.valueOf(grayColor)
+                btn.setTextColor(grayColor)
+                btn.iconTint = ColorStateList.valueOf(grayColor)
+                btn.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#F0F0F0"))
+
+                // USAMOS getString PARA SOPORTAR IDIOMAS
+                btn.text = getString(R.string.btn_reset_pending)
+            }
+            STATE_SUCCESS -> {
+                // Estado Éxito: Verde
+                val greenColor = Color.parseColor("#4CAF50")
+                btn.isEnabled = true // Lo dejamos habilitado aunque sea éxito
+                btn.strokeColor = ColorStateList.valueOf(greenColor)
+                btn.setTextColor(greenColor)
+                btn.iconTint = ColorStateList.valueOf(greenColor)
+                btn.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
+
+                // USAMOS getString PARA SOPORTAR IDIOMAS
+                btn.text = getString(R.string.btn_reset_success)
+            }
         }
     }
+
 
     // --- LISTENERS ---
 
     private fun setupListeners() {
-        // PASO 1: LEER
+        binding.btnModeAuto.setOnClickListener { setManualMode(false) }
+        binding.btnModeManual.setOnClickListener { setManualMode(true) }
+
+        // PASO 1
         binding.btnReadMaster.setOnClickListener {
-            setButtonState(binding.btnReadMaster, false)
-            waitingForTransferResult = false // Aseguramos que no salte pasos
-            Log.d(TAG, "Solicitando Lectura de Patrón (0x05)")
-            listener?.requestNextCommand(CMD_READ_ENGINEERING)
+            if (isManualMode) {
+                processManualEntry()
+            } else {
+                setButtonState(binding.btnReadMaster, false)
+                waitingForTransferResult = false
+                listener?.requestNextCommand(CMD_READ_ENGINEERING)
+            }
         }
 
-        // PASO 2: TRANSFERIR
+        // --- NUEVO: LÓGICA TOGGLE PARA BOTÓN RESET ---
+        binding.btnResetVolume.setOnClickListener {
+            if (resetVolumeState == STATE_PENDING) {
+                // CANCELAR: Si ya estaba pendiente y lo tocan, cancelamos.
+                updateResetButtonUI(STATE_IDLE)
+
+                // Enviamos un comando "seguro" (Lectura) para sobrescribir el comando Reset
+                // y que no se ejecute si el usuario acerca el teléfono por error.
+                listener?.requestNextCommand(CMD_READ_ENGINEERING)
+                Toast.makeText(context, "Reset cancelado", Toast.LENGTH_SHORT).show()
+
+            } else {
+                // ACTIVAR: Si estaba Idle o Success, lo ponemos en espera
+                updateResetButtonUI(STATE_PENDING)
+                listener?.requestNextCommand(CMD_RESET_VOLUME)
+            }
+        }
+
+        // PASO 2: ESCRITURA
         binding.btnStartCalibration.setOnClickListener {
+            if (isTransactionLocked) return@setOnClickListener
+
             val volString = binding.editTextVolPatron.text.toString().replace(',', '.')
             val tempString = binding.editTextTempPatron.text.toString().replace(',', '.')
-
             val volValue = volString.toFloatOrNull()
             val tempValue = tempString.toFloatOrNull()
 
             if (volValue != null && tempValue != null) {
+                isTransactionLocked = true
+                waitingForTransferResult = true
                 setButtonState(binding.btnStartCalibration, false)
 
-                // CORRECCIÓN: Activamos la bandera. Ahora sí aceptaremos un Success para ir al final.
-                waitingForTransferResult = true
+                // 1. Aumentamos el buffer a 11 bytes (1 tipo + 4 vol + 4 temp + 2 checksum)
+                val buffer = ByteBuffer.allocate(11).order(ByteOrder.LITTLE_ENDIAN)
+                buffer.put(detectedCalibrationType)
+                buffer.putFloat(volValue)   // Índices 1, 2, 3, 4
+                buffer.putFloat(tempValue)  // Índices 5, 6, 7, 8
 
-                val calibrationType = detectedCalibrationType
-                val buffer = ByteBuffer.allocate(9).order(ByteOrder.LITTLE_ENDIAN)
-                buffer.put(calibrationType)
-                buffer.putFloat(volValue)
-                buffer.putFloat(tempValue)
+                // --- NUEVO: Cálculo del Checksum (Suma simple de los 8 bytes) ---
+                val dataArray = buffer.array()
+                var checksum = 0
 
-                val payloadBytes = buffer.array()
+                // Iteramos solo por los 8 bytes de Volumen y Temperatura
+                for (i in 1..8) {
+                    // El "and 0xFF" es crucial porque en Java/Kotlin los bytes son con signo (signed).
+                    // Esto evita que un byte negativo reste valor a la suma, simulando el comportamiento de C.
+                    checksum += (dataArray[i].toInt() and 0xFF)
+                }
 
-                sharedViewModel.setConfigDataToWrite(payloadBytes)
-                Log.d(TAG, "Enviando Calibración. Tipo: $calibrationType")
-                listener?.requestCalibrationWrite()
+                // 2. Insertamos el checksum de 16-bits al final (índices 9 y 10)
+                buffer.putShort(checksum.toShort())
+                // -----------------------------------------------------------------
 
-                Toast.makeText(context, getString(R.string.toast_transferring), Toast.LENGTH_SHORT).show()
+                Log.d(
+                    TAG,
+                    "Enviando Calibración 0x13. Type=$detectedCalibrationType | Checksum=$checksum"
+                )
+
+                sharedViewModel.setConfigDataToWrite(buffer.array())
+                Toast.makeText(context, getString(R.string.toast_transferring), Toast.LENGTH_SHORT)
+                    .show()
+                listener?.requestNextCommand(CMD_CALIBRATE_FLOW)
+
             } else {
-                Toast.makeText(context, getString(R.string.toast_invalid_values), Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    getString(R.string.toast_invalid_values),
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
 
         binding.btnResetFlow.setOnClickListener { showStep1() }
-        binding.btnFinishSuccess.setOnClickListener { showStep2() }
+        binding.btnFinishSuccess.setOnClickListener { prepareNextDeviceSameValues() }
+    }
+
+    private fun processManualEntry() {
+        val manualId = selectedManualId
+        if (manualId == null) {
+            binding.inputLayoutManualFlow.error = getString(R.string.hint_select_flow_type)
+            return
+        }
+        binding.inputLayoutManualFlow.error = null
+        detectedCalibrationType = manualId.toByte()
+        val typeName = dynamicManualOptions.find { it.second == manualId }?.first ?: "Manual"
+        binding.textDetectedFlowType.text = "$typeName (Manual)"
+        binding.editTextVolPatron.setText("")
+        binding.editTextTempPatron.setText("")
+        showStep2()
     }
 
     // --- OBSERVERS ---
 
+
+    // --- OBSERVER ACTUALIZADO CON TIMER DE 3 SEGUNDOS ---
     private fun setupObservers() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-
-                // 1. Observador de Datos (Lectura Patrón)
+                // 1. Observer de Datos (Lectura) - SIN CAMBIOS
                 launch {
                     sharedViewModel.engineeringResponseData.collect { data ->
                         setButtonState(binding.btnReadMaster, true)
-
-                        if (data != null && data.isNotEmpty() && data.size >= ENGINEERING_PAYLOAD_SIZE) {
-                            // Si estamos en paso 1, procesamos y pasamos al 2
+                        if (!isManualMode && data != null && data.size >= MIN_ENGINEERING_PAYLOAD_SIZE) {
                             if (binding.layoutStep1.visibility == View.VISIBLE) {
                                 processReadData(data)
                             }
@@ -209,29 +387,52 @@ class CalibrationFragment : Fragment() {
                     }
                 }
 
-                // 2. Observador de ESTADO (Controla la UI final)
+                // 2. Observer de Estado (Escritura/Comandos) - CON CAMBIOS
                 launch {
                     sharedViewModel.writeStatus.collect { state ->
-                        // Reactivamos botones si terminó la carga
                         if (state !is NfcState.Loading && state !is NfcState.Idle) {
                             setButtonState(binding.btnReadMaster, true)
-                            setButtonState(binding.btnStartCalibration, true)
                         }
 
                         when (state) {
                             is NfcState.Success -> {
-                                // CORRECCIÓN CLAVE:
-                                // Solo mostramos la pantalla de "Transferencia Exitosa" si realmente
-                                // estábamos esperando el resultado de la transferencia (Paso 2).
-                                // Si recibimos Success en el Paso 1 (Lectura), lo ignoramos aquí
-                                // (se encarga processReadData).
+                                // A. ÉXITO EN CALIBRACIÓN NORMAL
                                 if (waitingForTransferResult) {
+                                    waitingForTransferResult = false
                                     showSuccess()
+                                    Toast.makeText(context, getString(R.string.msg_command_success), Toast.LENGTH_SHORT).show()
+                                }
+
+                                // B. ÉXITO EN RESET VOLUMEN (Lógica del Timer)
+                                if (resetVolumeState == STATE_PENDING) {
+                                    // 1. Ponemos el botón en VERDE
+                                    updateResetButtonUI(STATE_SUCCESS)
+                                    Toast.makeText(context, getString(R.string.msg_command_success), Toast.LENGTH_SHORT).show()
+
+                                    // 2. Iniciamos una corutina para esperar 3 segundos
+                                    viewLifecycleOwner.lifecycleScope.launch {
+                                        delay(3000) // Espera 3000ms (3 seg)
+
+                                        // Verificamos si sigue en estado SUCCESS (por si el usuario salió de la pantalla)
+                                        if (resetVolumeState == STATE_SUCCESS) {
+                                            updateResetButtonUI(STATE_IDLE) // Volver a ROJO
+                                        }
+                                    }
                                 }
                             }
                             is NfcState.Error -> {
-                                waitingForTransferResult = false
-                                Toast.makeText(context, state.errorMessage, Toast.LENGTH_LONG).show()
+                                if (waitingForTransferResult) {
+                                    isTransactionLocked = false
+                                    waitingForTransferResult = false
+                                    setButtonState(binding.btnStartCalibration, true)
+                                    Toast.makeText(context, "Error: ${state.errorMessage}", Toast.LENGTH_LONG).show()
+                                }
+
+                                // Si falla el Reset, volvemos a Rojo inmediatamente
+                                if (resetVolumeState == STATE_PENDING) {
+                                    updateResetButtonUI(STATE_IDLE)
+                                    Toast.makeText(context, "Error: ${state.errorMessage}", Toast.LENGTH_LONG).show()
+                                }
                             }
                             is NfcState.Loading -> { }
                             is NfcState.Idle -> { }
@@ -242,12 +443,11 @@ class CalibrationFragment : Fragment() {
         }
     }
 
+
     private fun processReadData(data: ByteArray) {
         try {
-            val usefulBytes = data.sliceArray(0 until ENGINEERING_PAYLOAD_SIZE)
-            val engineering = NfcDataParser.parseEngineeringData(usefulBytes)
-
-            val rawLastTrip = engineering.lastTripFlow.toFloat() / 10.0f
+            val engineering = NfcDataParser.parseEngineeringData(data)
+            val rawLastTrip = engineering.lastTripFlow.toFloat() / 100.0f
             val rawTemp = engineering.temperature.toFloat() / 10.0f
             val rawVolLiters = engineering.volumeLiters.toFloat() / 1000.0f
 
@@ -256,20 +456,30 @@ class CalibrationFragment : Fragment() {
 
             val typeName = getCalibrationTypeName(autoIndex)
             binding.textDetectedFlowType.text = typeName
-
             val valueToCopy = if (autoIndex == IDX_TEMP) 0.0f else rawVolLiters
 
             binding.editTextVolPatron.setText(String.format(Locale.US, "%.3f", valueToCopy))
             binding.editTextTempPatron.setText(String.format(Locale.US, "%.2f", rawTemp))
 
             showStep2()
-
             val msg = getString(R.string.toast_pattern_read_format, typeName)
             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
 
         } catch (e: Exception) {
             Log.e(TAG, "Error procesando datos: ${e.message}")
             Toast.makeText(context, getString(R.string.toast_error_reading), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun determineCalibrationIndex(flowValue: Float): Int {
+        return when {
+            flowValue < 0.5f -> IDX_TEMP
+            flowValue < 8.0f -> IDX_FLOW_Q1
+            flowValue < 15.0f -> IDX_FLOW_Q2
+            flowValue < 30.0f -> IDX_FLOW_035L
+            flowValue < 100.0f -> IDX_FLOW_1L
+            flowValue < 1500.0f -> IDX_FLOW_10L
+            else -> IDX_FLOW_Q3
         }
     }
 
@@ -286,19 +496,6 @@ class CalibrationFragment : Fragment() {
         }
     }
 
-    private fun determineCalibrationIndex(flowValue: Float): Int {
-        return when {
-            flowValue < 0.1f -> IDX_TEMP
-            flowValue >= 4.0f && flowValue <= 8.0f -> IDX_FLOW_Q1
-            flowValue > 8.0f && flowValue <= 15.0f -> IDX_FLOW_Q2
-            flowValue >= 15.0f && flowValue <= 24.0f -> IDX_FLOW_035L
-            flowValue >= 24.0f && flowValue <= 70.0f -> IDX_FLOW_1L
-            flowValue >= 100.0f && flowValue <= 700.0f -> IDX_FLOW_10L
-            flowValue >= 800.0f && flowValue <= 2800.0f -> IDX_FLOW_Q3
-            else -> IDX_TEMP
-        }
-    }
-
     override fun onDetach() {
         super.onDetach()
         listener = null
@@ -309,4 +506,3 @@ class CalibrationFragment : Fragment() {
         _binding = null
     }
 }
-

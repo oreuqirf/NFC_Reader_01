@@ -32,7 +32,7 @@
             android:id="@+id/text_version"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/app_version_rev"
+            tools:text="Rev.X.XX"
             android:textSize="14sp"
             android:textColor="#757575"
             android:layout_marginTop="4dp"/>

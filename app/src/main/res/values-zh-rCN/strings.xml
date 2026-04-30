@@ -1,6 +1,5 @@
 <resources>
-    <string name="app_name">MS206 关机工具</string>
-    <string name="app_version_rev">Rev.1.01</string>
+    <string name="app_name">MS206 标定</string>
 
     <string name="title_home">首页</string>
     <string name="title_dashboard">仪表盘</string>
@@ -14,8 +13,6 @@
 
     <string name="title_nfc_data">NFC 标签数据</string>
 
-    <string name="hint_serial_number">序列号</string>
-    <string name="hint_firmware_version">固件版本</string>
     <string name="hint_last_config_date">上次配置时间</string>
 
     <string name="hint_volume_m3">累积量 [m³]</string>
@@ -37,7 +34,6 @@
     <string name="hint_dtof">DToF (飞行时间差)</string>
     <string name="hint_std_dev">标准差 (StdDev)</string>
     <string name="hint_time_sec">时间 [秒]</string>
-    <string name="hint_chip_temperature">芯片温度</string>
     <string name="hint_lux">光照度 (Lux)</string>
     <string name="hint_rak_frame_counter">RAK 帧计数器</string>
     <string name="hint_last_trip_flow">最近一次行程流量</string>
@@ -72,14 +68,6 @@
     <string name="toast_pattern_read_format">读取标准器: %1$s</string>
     <string name="toast_error_reading">读取标准器错误。</string>
 
-    <string name="cal_type_temp_only">仅温度</string>
-    <string name="cal_type_flow_10l">流量 10 L/m (600 L/h)</string>
-    <string name="cal_type_flow_1l">流量 1 L/m (60 L/h)</string>
-    <string name="cal_type_flow_035l">流量 0.35 L/m (21 L/h)</string>
-    <string name="cal_type_flow_q2">流量 Q2 (10 L/h)</string>
-    <string name="cal_type_flow_q1">流量 Q1 (6 L/h)</string>
-    <string name="cal_type_flow_q3">流量 Q3 (2500 L/h)</string>
-    <string name="cal_type_unknown">未知 / 温度</string>
 
     <string name="status_waiting_nfc">等待 NFC 连接...</string>
     <string name="error_tag_empty">错误：标签为空或无数据。</string>
@@ -103,6 +91,143 @@
     <string name="toast_requesting_shutdown">正在请求关机...</string>
 
     <string name="nav_title_shutdown">设备关机</string>
+
+        <string name="status_nfc_idle">靠近 NFC 标签以开始。</string>
+        <string name="status_nfc_detected">检测到标签！正在跳转至信息...</string>
+        <string name="toast_nfc_connected">NFC 标签已连接！正在分析数据。</string>
+
+        <string name="desc_lang_es">西班牙语</string>
+        <string name="desc_lang_en">英语</string>
+        <string name="desc_lang_zh">中文</string>
+        <string name="desc_nfc_status_icon">NFC 状态图标</string>
+
+
+    <string name="msg_export_success">配置导出成功。</string>
+    <string name="msg_export_error_no_data">没有可导出的数据。请先读取配置。</string>
+    <string name="msg_export_error_write">写入文件时出错。</string>
+
+    <string name="title_config_data">配置数据 (可编辑):</string>
+        <string name="title_temp_correction">温度修正:</string>
+        <string name="title_flow_correction">流量修正 (% 误差):</string>
+        <string name="title_main_actions">主要操作</string>
+        <string name="title_special_commands">特殊指令:</string>
+        <string name="text_no_data">无读取数据</string>
+        <string name="text_pending_save">等待保存</string>
+
+        <string name="hint_k_meter">仪表系数 K</string>
+
+        <string name="hint_fc_q1">流量修正 Q1</string>
+        <string name="hint_fc_q2">流量修正 Q2</string>
+        <string name="hint_fc_035">流量修正 0.35 L/min</string>
+        <string name="hint_fc_100">流量修正 1.00 L/min</string>
+        <string name="hint_fc_1000">流量修正 10.00 L/min</string>
+        <string name="hint_fc_q3">流量修正 Q3</string>
+
+        <string name="btn_read_config">读取配置 (0x03)</string>
+        <string name="btn_save_config">保存配置 (0x04)</string>
+        <string name="btn_load_file">从文件加载</string>
+        <string name="btn_export_file">下载到文件</string>
+
+        <string name="btn_set_volume">设置体积 (0x14)</string>
+        <string name="btn_normal_mode">正常模式 (0x12)</string>
+        <string name="btn_calibrate_flow">校准流量 (0x13)</string>
+        <string name="btn_engineering_mode">工程模式 (0x15)</string>
+        <string name="btn_factory_reset">恢复出厂设置 (0x0A)</string>
+
+        <string name="dialog_title_volume">设置体积</string>
+        <string name="dialog_msg_volume">输入新数值 (浮点数):</string>
+        <string name="dialog_btn_accept">确定</string>
+        <string name="dialog_btn_cancel">取消</string>
+
+        <string name="msg_error_read_first">错误：请先读取配置。</string>
+        <string name="msg_error_invalid_fields">请检查无效字段。</string>
+        <string name="msg_config_read">配置已读取。</string>
+        <string name="msg_error_parse">解析错误。</string>
+        <string name="msg_error_data_size">错误：数据大小不正确。</string>
+        <string name="msg_command_success">指令执行成功</string>
+        <string name="msg_file_loaded">文件加载成功。</string>
+        <string name="msg_error_json">错误：JSON 结构无效。</string>
+        <string name="msg_invalid_value">数值无效。</string>
+
+    <string name="hint_lux_threshold">光照阈值</string>
+    <string name="hint_temp_calibrated">校准温度 [°C]</string>
+
+    <string name="status_first_scan">首次扫描：指令 0x%1$s</string>
+    <string name="status_scan_pending">扫描：0x%1$s 待处理...</string>
+    <string name="status_reading_pattern">读取模式 (0x05)...</string>
+    <string name="status_writing_config">写入配置...</string>
+    <string name="status_setting_volume">设置音量...</string>
+    <string name="status_calibrating">校准流量...</string>
+    <string name="status_eng_mode">进入工程模式 (0x15)...</string>
+    <string name="status_req_sent_wait">请求已发送。请保持以确认...</string>
+    <string name="status_fallback_ok">恢复成功。请重试。</string>
+    <string name="error_critical">严重 NFC 错误</string>
+    <string name="error_ndef_io">NDEF I/O 错误</string>
+    <string name="error_response_not_found">未在标签上找到响应。</string>
+
+
+    <string name="btn_continue_manual">输入数值</string>
+    <string name="hint_select_flow_type">选择流量类型</string>
+    <string name="manual_opt_temp">仅温度 (0 L/h)</string>
+
+    <string name="manual_opt_q1">流量 Q1 (低)</string>
+    <string name="manual_opt_q2">流量 Q2 (中低)</string>
+    <string name="manual_opt_035">流量 0.35 L/m</string>
+    <string name="manual_opt_1">流量 1.0 L/m</string>
+    <string name="manual_opt_10">流量 10.0 L/m</string>
+    <string name="manual_opt_q3">流量 Q3 (最大)</string>
+
+
+    <string name="label_last_update">最后更新：</string>
+    <string name="btn_write_config">写入配置</string>
+
+    <string name="header_general_params">通用参数</string>
+    <string name="header_temperature_cal">温度校准</string>
+    <string name="header_flow_error_curve">流量误差曲线</string>
+    <string name="header_device_commands">设备指令</string>
+
+    <string name="btn_enter_eng_mode">工程模式</string>
+    <string name="btn_reset_device">重置读数</string>
+
+    <string name="cal_type_temp_only">仅温度</string>
+    <string name="cal_type_flow_10l">流量 10 L/m (600 L/h)</string>
+    <string name="cal_type_flow_1l">流量 1 L/m (60 L/h)</string>
+    <string name="cal_type_flow_035l">流量 0.35 L/m (21 L/h)</string>
+    <string name="cal_type_flow_q2">流量 Q2 (10.31 L/h)</string>
+    <string name="cal_type_flow_q1">流量 Q1 (6.25 L/h)</string>
+    <string name="cal_type_flow_q3">流量 Q3 (2500 L/h)</string>
+    <string name="cal_type_unknown">未知 / 温度</string>
+
+    <string name="btn_reset_pending">靠近手机... (点击取消)</string>
+    <string name="btn_reset_success">音量重置成功</string>
+
+    <string name="label_acc_skip_threshold">累积跳过阈值</string>
+
+    <string name="header_device_identity">设备标识</string>
+
+    <string name="hint_serial_number">序列号</string>
+    <string name="hint_firmware_version">固件版本</string>
+    <string name="hint_low_stability">低稳定性 (%)</string>
+    <string name="hint_high_stability">高稳定性 (%)</string>
+    <string name="hint_temp_raw_low">原始低温 (Raw Low)</string>
+    <string name="hint_temp_raw_high">原始高温 (Raw High)</string>
+    <string name="hint_temp_cal_low">校准低温 (Cal Low)</string>
+    <string name="hint_temp_cal_high">校准高温 (Cal High)</string>
+    <string name="hint_q1_error">Q1 误差系数</string>
+    <string name="hint_q2_error">Q2 误差系数</string>
+    <string name="hint_035l_error">0.35L 误差系数</string>
+    <string name="hint_100l_error">1.00L 误差系数</string>
+    <string name="hint_10l_error">10.0L 误差系数</string>
+    <string name="hint_q3_error">Q3 误差系数</string>
+
+    <string name="btn_config_volume">设置\n音量\n(0X14)</string>
+    <string name="btn_user_mode">用户\n模式\n(0X12)</string>
+    <string name="btn_clear_flags">清除\n标志\n(0X16)</string>
+    <string name="btn_autocalibration">自动校准\n模式</string>
+    <string name="btn_reset_volume">重置\n音量</string>
+    <string name="btn_shutdown">关闭\n设备\n(0X10)</string>
+    <string name="btn_save_batch">保存\n批次</string>
+    <string name="btn_export_csv">导出\nCSV</string>
 
 </resources>
 

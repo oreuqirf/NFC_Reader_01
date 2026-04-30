@@ -13,6 +13,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.example.nfc_reader_01.utils.LogManager
 
+// Asegúrate de tener estos imports en la parte superior:
+import kotlinx.coroutines.Dispatchers
+import com.example.nfc_reader_01.collection.AppDatabase
+import com.example.nfc_reader_01.collection.InstrumentRecord
+import android.content.Context
+import com.example.nfc_reader_01.data.ConfigurationData
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers.IO
+
 data class LogEntry(
     val message: String,
     val timestamp: Long = System.currentTimeMillis()
@@ -65,6 +74,77 @@ class SharedNfcViewModel(application: Application) : AndroidViewModel(applicatio
     fun setStatusLoading() { _writeStatus.value = NfcState.Loading }
     fun setStatusSuccess() { _writeStatus.value = NfcState.Success }
     fun setStatusError(message: String) { _writeStatus.value = NfcState.Error(message) }
+
+    // =====================================================================
+    // --- VARIABLES PARA OBSERVAR LA BASE DE DATOS DESDE LA PANTALLA ---
+    // =====================================================================
+
+    // Lista de todos los registros actuales
+    private val _databaseRecords = kotlinx.coroutines.flow.MutableStateFlow<List<com.example.nfc_reader_01.collection.InstrumentRecord>>(emptyList())
+    val databaseRecords: kotlinx.coroutines.flow.StateFlow<List<com.example.nfc_reader_01.collection.InstrumentRecord>> = _databaseRecords
+
+    // Cantidad de registros en el lote
+    private val _batchCount = kotlinx.coroutines.flow.MutableStateFlow(0)
+    val batchCount: kotlinx.coroutines.flow.StateFlow<Int> = _batchCount
+
+
+
+
+    // =====================================================================
+    // --- FUNCIONES DE ADMINISTRACIÓN DE BASE DE DATOS ---
+    // =====================================================================
+
+    // 1. Cargar todo (Llama a esta función cuando abras la pantalla del Gestor)
+    fun loadAllRecords(context: android.content.Context) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val db = com.example.nfc_reader_01.collection.AppDatabase.getDatabase(context)
+            val records = db.recordDao().getAllRecords()
+            val count = db.recordDao().getRecordCount()
+
+            _databaseRecords.value = records
+            _batchCount.value = count
+        }
+    }
+
+    // 2. Borrar toda la tabla (Vaciado rápido)
+    fun clearDatabase(context: android.content.Context) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val db = com.example.nfc_reader_01.collection.AppDatabase.getDatabase(context)
+                db.recordDao().deleteAllRecords()
+
+                // Actualizamos la UI
+                _databaseRecords.value = emptyList()
+                _batchCount.value = 0
+
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _uiMessage.value = "Base de datos vaciada correctamente"
+                }
+            } catch (e: Exception) {
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _uiMessage.value = "Error al borrar: ${e.message}"
+                }
+            }
+        }
+    }
+
+    // 3. Borrar un solo elemento
+    fun deleteSingleRecord(context: android.content.Context, record: com.example.nfc_reader_01.collection.InstrumentRecord) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val db = com.example.nfc_reader_01.collection.AppDatabase.getDatabase(context)
+                db.recordDao().deleteRecord(record)
+
+                // Recargamos la lista actualizada
+                loadAllRecords(context)
+
+            } catch (e: Exception) {
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _uiMessage.value = "Error al borrar registro: ${e.message}"
+                }
+            }
+        }
+    }
 
     // Compatibilidad
     fun emitWriteStatus(status: String) {
@@ -172,5 +252,48 @@ class SharedNfcViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun isReadCommand(cmd: Byte?): Boolean {
         return cmd == 0x01.toByte() || cmd == 0x02.toByte() || cmd == 0x03.toByte() || cmd == 0x05.toByte()
+    }
+
+
+    fun saveInstrumentDataToDatabase(
+        context: android.content.Context,
+        serial: String,
+        firmware: String,
+        config: ConfigurationData
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val db = com.example.nfc_reader_01.collection.AppDatabase.getDatabase(context)
+
+                val record = com.example.nfc_reader_01.collection.InstrumentRecord(
+                    serialNumber = serial,
+                    firmwareVersion = firmware,
+                    kMeter = config.kMeter,
+                    low_stability = config.low_stability,
+                    high_stability = config.high_stability,
+                    tempRawLow = config.lowTempUnscaled,
+                    tempRawHigh = config.highTempUnscaled,
+                    tempCalLow = config.lowTempCorrected,
+                    tempCalHigh = config.highTempCorrected,
+                    fcQ1Error = config.fcQ1_error,
+                    fcQ2Error = config.fcQ2_error,
+                    fcQ035Error = config.fcQ0_35_error,
+                    fcQ100Error = config.fcQ1_00_error,
+                    fcQ10LmError = config.fcQ10_00_error,
+                    fcQ3Error = config.fcQ3_error,
+                    deviceLastConfigDate = config.lastConfigurationDate.toLong() * 1000
+                )
+
+                db.recordDao().insertRecord(record)
+
+                withContext(Dispatchers.Main) {
+                    _uiMessage.value = "¡Lectura guardada en lote!"
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _uiMessage.value = "Error al guardar: ${e.message}"
+                }
+            }
+        }
     }
 }
