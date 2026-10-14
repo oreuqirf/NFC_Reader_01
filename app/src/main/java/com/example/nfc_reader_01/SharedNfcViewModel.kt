@@ -31,7 +31,8 @@ data class LogEntry(
 class SharedNfcViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun getString(resId: Int): String = getApplication<Application>().getString(resId)
-    private fun getString(resId: Int, vararg args: Any): String = getApplication<Application>().getString(resId, *args)
+    private fun getString(resId: Int, vararg args: Any): String =
+        getApplication<Application>().getString(resId, *args)
 
     private val _nfcTagInfo = MutableStateFlow<String?>(null)
     val nfcTagInfo: StateFlow<String?> = _nfcTagInfo.asStateFlow()
@@ -66,28 +67,49 @@ class SharedNfcViewModel(application: Application) : AndroidViewModel(applicatio
     private val _configurationResponseData = MutableStateFlow<ByteArray?>(null)
     val configurationResponseData: StateFlow<ByteArray?> = _configurationResponseData.asStateFlow()
 
-    fun clearConfigurationResponseData() { _configurationResponseData.value = null }
-    fun setNfcTagInfo(info: String?) { _nfcTagInfo.value = info }
-    fun setUiMessage(message: String) { _uiMessage.value = message }
+    fun clearConfigurationResponseData() {
+        _configurationResponseData.value = null
+    }
 
-    fun setStatusIdle() { _writeStatus.value = NfcState.Idle }
-    fun setStatusLoading() { _writeStatus.value = NfcState.Loading }
-    fun setStatusSuccess() { _writeStatus.value = NfcState.Success }
-    fun setStatusError(message: String) { _writeStatus.value = NfcState.Error(message) }
+    fun setNfcTagInfo(info: String?) {
+        _nfcTagInfo.value = info
+    }
+
+    fun setUiMessage(message: String) {
+        _uiMessage.value = message
+    }
+
+    fun setStatusIdle() {
+        _writeStatus.value = NfcState.Idle
+    }
+
+    fun setStatusLoading() {
+        _writeStatus.value = NfcState.Loading
+    }
+
+    fun setStatusSuccess() {
+        _writeStatus.value = NfcState.Success
+    }
+
+    fun setStatusError(message: String) {
+        _writeStatus.value = NfcState.Error(message)
+    }
 
     // =====================================================================
     // --- VARIABLES PARA OBSERVAR LA BASE DE DATOS DESDE LA PANTALLA ---
     // =====================================================================
 
     // Lista de todos los registros actuales
-    private val _databaseRecords = kotlinx.coroutines.flow.MutableStateFlow<List<com.example.nfc_reader_01.collection.InstrumentRecord>>(emptyList())
-    val databaseRecords: kotlinx.coroutines.flow.StateFlow<List<com.example.nfc_reader_01.collection.InstrumentRecord>> = _databaseRecords
+    private val _databaseRecords =
+        kotlinx.coroutines.flow.MutableStateFlow<List<com.example.nfc_reader_01.collection.InstrumentRecord>>(
+            emptyList()
+        )
+    val databaseRecords: kotlinx.coroutines.flow.StateFlow<List<com.example.nfc_reader_01.collection.InstrumentRecord>> =
+        _databaseRecords
 
     // Cantidad de registros en el lote
     private val _batchCount = kotlinx.coroutines.flow.MutableStateFlow(0)
     val batchCount: kotlinx.coroutines.flow.StateFlow<Int> = _batchCount
-
-
 
 
     // =====================================================================
@@ -129,7 +151,10 @@ class SharedNfcViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // 3. Borrar un solo elemento
-    fun deleteSingleRecord(context: android.content.Context, record: com.example.nfc_reader_01.collection.InstrumentRecord) {
+    fun deleteSingleRecord(
+        context: android.content.Context,
+        record: com.example.nfc_reader_01.collection.InstrumentRecord
+    ) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val db = com.example.nfc_reader_01.collection.AppDatabase.getDatabase(context)
@@ -148,7 +173,11 @@ class SharedNfcViewModel(application: Application) : AndroidViewModel(applicatio
 
     // Compatibilidad
     fun emitWriteStatus(status: String) {
-        if (status.contains("Exitosa", ignoreCase = true) || status.contains("Success", ignoreCase = true)) {
+        if (status.contains("Exitosa", ignoreCase = true) || status.contains(
+                "Success",
+                ignoreCase = true
+            )
+        ) {
             setStatusSuccess()
         } else {
             setStatusError(status)
@@ -205,16 +234,19 @@ class SharedNfcViewModel(application: Application) : AndroidViewModel(applicatio
                     setUiMessage(getString(R.string.msg_read_success_identity))
                     setStatusSuccess()
                 }
+
                 0x82.toByte() -> {
                     _processResponseData.emit(data)
                     setUiMessage(getString(R.string.msg_read_success_process))
                     setStatusSuccess()
                 }
+
                 0x85.toByte() -> {
                     _engineeringResponseData.emit(data)
                     setUiMessage(getString(R.string.msg_read_success_engineering))
                     setStatusSuccess()
                 }
+
                 0x83.toByte() -> {
                     _configurationResponseData.emit(data)
                     setUiMessage(getString(R.string.msg_read_success_config))
@@ -228,12 +260,14 @@ class SharedNfcViewModel(application: Application) : AndroidViewModel(applicatio
                     setUiMessage(msg)
                     setStatusSuccess()
                 }
+
                 0x8A.toByte() -> {
                     val msg = getString(R.string.msg_reset_success)
                     LogManager.log(msg)
                     setUiMessage(msg)
                     setStatusSuccess()
                 }
+
                 0x13.toByte() -> {
                     val msg = getString(R.string.msg_calibration_success)
                     LogManager.log(msg)
@@ -241,7 +275,8 @@ class SharedNfcViewModel(application: Application) : AndroidViewModel(applicatio
                 }
 
                 else -> {
-                    val message = getString(R.string.error_protocol_unknown, responseCode.toHexString())
+                    val message =
+                        getString(R.string.error_protocol_unknown, responseCode.toHexString())
                     LogManager.log(message)
                     setUiMessage(message)
                     setStatusError(message)
@@ -253,7 +288,6 @@ class SharedNfcViewModel(application: Application) : AndroidViewModel(applicatio
     private fun isReadCommand(cmd: Byte?): Boolean {
         return cmd == 0x01.toByte() || cmd == 0x02.toByte() || cmd == 0x03.toByte() || cmd == 0x05.toByte()
     }
-
 
     fun saveInstrumentDataToDatabase(
         context: android.content.Context,
@@ -269,18 +303,30 @@ class SharedNfcViewModel(application: Application) : AndroidViewModel(applicatio
                     serialNumber = serial,
                     firmwareVersion = firmware,
                     kMeter = config.kMeter,
-                    low_stability = config.low_stability,
-                    high_stability = config.high_stability,
+
+                    // CORREGIDO: Nombres de variables exactos
+                    lowStability = config.lowStability,
+                    highStability = config.highStability,
+
                     tempRawLow = config.lowTempUnscaled,
                     tempRawHigh = config.highTempUnscaled,
                     tempCalLow = config.lowTempCorrected,
                     tempCalHigh = config.highTempCorrected,
+
+                    // Curva de Error de Flujo (8 Puntos)
                     fcQ1Error = config.fcQ1_error,
                     fcQ2Error = config.fcQ2_error,
-                    fcQ035Error = config.fcQ0_35_error,
-                    fcQ100Error = config.fcQ1_00_error,
-                    fcQ10LmError = config.fcQ10_00_error,
+                    fcP3Error = config.fcP3_error,        // Genérico P3
+                    fcP4Error = config.fcP4_error,        // Genérico P4
+                    fcP5Error = config.fcP5_error,        // Genérico P5
+                    fcP6Error = config.fcP6_error,        // Genérico P6
+                    fcP7Error = config.fcP7_error,        // Genérico P7
+                    fcP8Error = config.fcP8_error,        // Genérico P8
+                    fc10LmError = config.fc10_00_error,   // Fijo 10.0 L/m
+                    fcP10Error = config.fcP10_error,        // Nuevo Genérico P10
                     fcQ3Error = config.fcQ3_error,
+                    fcQ4Error = config.fcQ4_error,        // Nuevo Genérico Q4
+
                     deviceLastConfigDate = config.lastConfigurationDate.toLong() * 1000
                 )
 

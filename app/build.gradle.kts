@@ -15,7 +15,7 @@ android {
         targetSdk = 35
 
         versionCode = 2
-        versionName = "Rev 2.12"
+        versionName = "Rev 2.15"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -60,6 +60,18 @@ android {
             // Definimos el modo como FULL
             buildConfigField("String", "UI_MODE", "\"FULL\"")
         }
+
+        // APP 4: Full 8P (Nuevas tablas de usuario)
+        create("full_p12") {
+            dimension = "version"
+            // El sufijo ".p8" genera un paquete diferente (com.example.nfc_reader_01.full.v2)
+            applicationIdSuffix = ".full.p12"
+            versionNameSuffix = "-FULL-P12"
+            buildConfigField("String", "UI_MODE", "\"FULL\"")
+            // Nombre distinto para reconocerla en la pantalla del teléfono
+            manifestPlaceholders["appName"] = "NFC Full P12"
+        }
+
     }
 
     buildTypes {

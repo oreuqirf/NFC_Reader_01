@@ -161,7 +161,7 @@
 
 
 
-    <string name="dialog_title_volume">Establecer Volumen</string>
+        <string name="dialog_title_volume">Establecer Volumen</string>
         <string name="dialog_msg_volume">Ingrese el nuevo valor (Float):</string>
         <string name="dialog_btn_accept">Aceptar</string>
         <string name="dialog_btn_cancel">Cancelar</string>
@@ -214,14 +214,19 @@
     <string name="btn_enter_eng_mode">Modo Ingeniería</string>
     <string name="btn_reset_device">Reiniciar Volumen</string>
 
-
     <string name="cal_type_temp_only">Solo Temperatura (0 L/h)</string>
-    <string name="cal_type_flow_q1">Caudal Q1 (Mínimo) (6.25 L/h)</string>
-    <string name="cal_type_flow_q2">Caudal Q2 (Transición) (10.31 L/h)</string>
-    <string name="cal_type_flow_035l">Caudal 0.35 L/m (21 L/h)</string>
-    <string name="cal_type_flow_1l">Caudal 1.0 L/m (60 L/h)</string>
+    <string name="cal_type_flow_q1">Caudal Q1 (10 L/h)</string>
+    <string name="cal_type_flow_q2">Caudal Q2 (16 L/h)</string>
+    <string name="cal_type_flow_p3">Caudal P3 (33 L/h)</string>
+    <string name="cal_type_flow_p4">Caudal P4 (00 L/h)</string>
+    <string name="cal_type_flow_p5">Caudal P5 (00 L/h)</string>
+    <string name="cal_type_flow_p6">Caudal P6 (00 L/h)</string>
+    <string name="cal_type_flow_p7">Caudal P7 (00 L/h)</string>
+    <string name="cal_type_flow_p8">Caudal P8 (00 L/h)</string>
     <string name="cal_type_flow_10l">Caudal 10.0 L/m (600 L/h)</string>
-    <string name="cal_type_flow_q3">Caudal Q3 (2500 L/h)</string>
+    <string name="cal_type_flow_p10">Caudal P10 (2000 L/h)</string>
+    <string name="cal_type_flow_q3">Caudal Q3 (4000 L/h)</string>
+    <string name="cal_type_flow_q4">Caudal Q4 (5000 L/h)</string>
     <string name="cal_type_unknown">Desconocido</string>
 
     <string name="btn_reset_pending">Acerque teléfono... (Toque para cancelar)</string>
@@ -236,11 +241,37 @@
     <!-- Cajas de texto (Hints) -->
     <string name="hint_low_stability">Estabilidad Low (%)</string>
     <string name="hint_high_stability">Estabilidad High (%)</string>
-    <string name="hint_q1_error">Q1 Error Factor</string>
-    <string name="hint_q2_error">Q2 Error Factor</string>
-    <string name="hint_035l_error">0.35L Error Factor</string>
-    <string name="hint_100l_error">1.00L Error Factor</string>
+
+    <string name="hint_q1_error">FC Q1</string>
+    <string name="hint_q2_error">FC Q2</string>
+    <string name="hint_p3_error">FC P3</string>
+    <string name="hint_p4_error">FC P4</string>
+    <string name="hint_p5_error">FC P3</string>
+    <string name="hint_p6_error">FC P4</string>
+    <string name="hint_p7_error">FC P3</string>
+    <string name="hint_p8_error">FC P4</string>
     <string name="hint_10l_error">10.0L Error Factor</string>
-    <string name="hint_q3_error">Q3 Error Factor</string>
+    <string name="hint_p10_error">FC P6</string>
+    <string name="hint_q3_error">FC Q3</string>
+    <string name="hint_q4_error">FC Q4</string>
+
+    <string name="btn_start_batch">INICIAR LOTE: %1$s</string>
+    <string name="text_device_step">%1$s | Equipo %2$d de 6</string>
+    <string name="btn_transfer_device">TRANSFERIR (EQUIPO %1$d/6)</string>
+    <string name="toast_batch_complete">¡LOTE COMPLETO EXITOSAMENTE!</string>
+    <string name="toast_change_valve">¡ATENCIÓN! Cambiar válvula a: %1$s</string>
+    <string name="mode_manual_suffix">%1$s (Manual)</string>
+
+    <string name="btn_mode_sequence">BANCO</string>
+    <string name="btn_mode_manual">MANUAL</string>
+
+    <string name="toast_ready_next_device">Listo para el siguiente equipo</string>
+    <string name="text_manual_mode">Modo Manual</string>
+    <string name="toast_reset_canceled">Reset cancelado</string>
+    <string name="toast_error_prefix">Error: %1$s</string>
+
+    <string name="btn_skip_next_flow">Siguiente Caudal (Saltar)</string>
+
+    <string name="btn_batch_complete">LOTE COMPLETO</string>
 
 </resources>

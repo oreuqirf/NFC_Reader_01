@@ -187,6 +187,7 @@
     <string name="btn_enter_eng_mode">Engineering Mode</string>
     <string name="btn_reset_device">Reset Volume</string>
 
+    <!--
     <string name="cal_type_temp_only">Temperature Only (0 L/h)</string>
     <string name="cal_type_flow_q1">Flow Q1 (Min 6.25 L/h)</string>
     <string name="cal_type_flow_q2">Flow Q2 (Transition 10.31 L/h)</string>
@@ -194,6 +195,22 @@
     <string name="cal_type_flow_1l">Flow 1.0 L/m (60 L/h)</string>
     <string name="cal_type_flow_10l">Flow 10.0 L/m (600 L/h)</string>
     <string name="cal_type_flow_q3">Flow Q3 (2500 L/h)</string>
+    <string name="cal_type_unknown">Unknown</string>
+    -->
+
+    <string name="cal_type_temp_only">Temperature Only (0 L/h)</string>
+    <string name="cal_type_flow_q1">Flow Q1 (10 L/h)</string>
+    <string name="cal_type_flow_q2">Flow Q2 (16 L/h)</string>
+    <string name="cal_type_flow_p3">Flow P3 (33 L/h)</string>
+    <string name="cal_type_flow_p4">Flow P4 (96 L/h)</string>
+    <string name="cal_type_flow_p5">Flow P5 (00 L/h)</string>
+    <string name="cal_type_flow_p6">Flow P6 (00 L/h)</string>
+    <string name="cal_type_flow_p7">Flow P7 (00 L/h)</string>
+    <string name="cal_type_flow_p8">Flow P8 (00 L/h)</string>
+    <string name="cal_type_flow_10l">Flow 10.0 L/m (600 L/h)</string>
+    <string name="cal_type_flow_p10">Flow P10 (2000 L/h)</string>
+    <string name="cal_type_flow_q3">Flow Q3 (4000 L/h)</string>
+    <string name="cal_type_flow_q4">Flow Q4 (5000 L/h)</string>
     <string name="cal_type_unknown">Unknown</string>
 
     <string name="btn_reset_pending">Bring phone near... (Tap to cancel)</string>
@@ -214,12 +231,19 @@
     <string name="hint_temp_raw_high">Temp Raw High</string>
     <string name="hint_temp_cal_low">Temp Cal Low</string>
     <string name="hint_temp_cal_high">Temp Cal High</string>
-    <string name="hint_q1_error">Q1 Error Factor</string>
-    <string name="hint_q2_error">Q2 Error Factor</string>
-    <string name="hint_035l_error">0.35L Error Factor</string>
-    <string name="hint_100l_error">1.00L Error Factor</string>
-    <string name="hint_10l_error">10.0L Error Factor</string>
-    <string name="hint_q3_error">Q3 Error Factor</string>
+
+    <string name="hint_q1_error">Error Factor Q1</string>
+    <string name="hint_q2_error">Error Factor Q2</string>
+    <string name="hint_p3_error">Error Factor P3</string>
+    <string name="hint_p4_error">Error Factor P4</string>
+    <string name="hint_p5_error">Error Factor P5</string>
+    <string name="hint_p6_error">Error Factor P6</string>
+    <string name="hint_p7_error">Error Factor P7</string>
+    <string name="hint_p8_error">Error Factor P8</string>
+    <string name="hint_10l_error">Error Factor 10.0 L/m</string>
+    <string name="hint_p10_error">Error Factor P10</string>
+    <string name="hint_q3_error">Error Factor Q3</string>
+    <string name="hint_q4_error">Error Factor Q4</string>
 
     <!-- Botones Inferiores -->
     <string name="btn_config_volume">Set\nVolume\n(0X14)</string>
@@ -230,6 +254,27 @@
     <string name="btn_shutdown">Shutdown\nDevice\n(0X10)</string>
     <string name="btn_save_batch">Save\nBatch</string>
     <string name="btn_export_csv">Export\nCSV</string>
+
+    <string name="btn_start_batch">START BATCH: %1$s</string>
+    <string name="text_device_step">%1$s | Device %2$d of 6</string>
+    <string name="btn_transfer_device">TRANSFER (DEVICE %1$d/6)</string>
+    <string name="toast_batch_complete">BATCH COMPLETED SUCCESSFULLY!</string>
+    <string name="toast_change_valve">ATTENTION! Change valve to: %1$s</string>
+    <string name="mode_manual_suffix">%1$s (Manual)</string>
+
+    <string name="btn_mode_sequence">BATCH</string>
+    <string name="btn_mode_manual">MANUAL</string>
+
+    <string name="toast_ready_next_device">Ready for next device</string>
+    <string name="text_manual_mode">Manual Mode</string>
+    <string name="toast_reset_canceled">Reset canceled</string>
+    <string name="toast_error_prefix">Error: %1$s</string>
+
+    <string name="btn_skip_next_flow">Next Flow (Skip)</string>
+
+    <string name="btn_batch_complete">BATCH COMPLETE</string>
+
+    <string name="toast_missing_volume">Missing Volume</string>
 
 
 </resources>

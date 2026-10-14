@@ -2,7 +2,6 @@ package com.example.nfc_reader_01.ui.notifications
 
 import android.app.AlertDialog
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -102,7 +101,6 @@ class NotificationsFragment : Fragment() {
         }
     }
 
-
     private fun showRecordDetails(record: com.example.nfc_reader_01.collection.InstrumentRecord) {
         val dateFormat = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm:ss", java.util.Locale.getDefault())
         val deviceDate = dateFormat.format(java.util.Date(record.deviceLastConfigDate))
@@ -110,31 +108,33 @@ class NotificationsFragment : Fragment() {
 
         // Formateamos todos los datos en un texto limpio y ordenado
         val detailsText = """
-            IDENTIDAD
-            • Serial: ${record.serialNumber}
-            • Firmware: ${record.firmwareVersion}
+        IDENTIDAD
+        • Serial: ${record.serialNumber}
+        • Firmware: ${record.firmwareVersion}
 
-            CONFIGURACIÓN GENERAL
-            • K Meter: ${record.kMeter}
-            • Estabilidad: ${record.low_stability}
-            • Tiempo Parada: ${record.high_stability}
+        CONFIGURACIÓN GENERAL
+        • K Meter: ${record.kMeter}
+        • Estabilidad Baja: ${record.lowStability}
+        • Estabilidad Alta: ${record.highStability}
 
-            TEMPERATURAS (Raw / Calibrada)
-            • Temp Baja: ${record.tempRawLow} / ${record.tempCalLow}
-            • Temp Alta: ${record.tempRawHigh} / ${record.tempCalHigh}
+        TEMPERATURAS (Raw / Calibrada)
+        • Temp Baja: ${record.tempRawLow} / ${record.tempCalLow}
+        • Temp Alta: ${record.tempRawHigh} / ${record.tempCalHigh}
 
-            ERRORES DE FLUJO
-            • Factor Q1: ${record.fcQ1Error}
-            • Factor Q2: ${record.fcQ2Error}
-            • Factor 0.35L: ${record.fcQ035Error}
-            • Factor 1.00L: ${record.fcQ100Error}
-            • Factor 10.0L: ${record.fcQ10LmError}
-            • Factor Q3: ${record.fcQ3Error}
+        ERRORES DE FLUJO
+        • Factor Q1: ${record.fcQ1Error}
+        • Factor Q2: ${record.fcQ2Error}
+        • Factor P3: ${record.fcP3Error}
+        • Factor P4: ${record.fcP4Error}
+        • Factor 10.0L: ${record.fc10LmError}
+        • Factor P5: ${record.fcP5Error}
+        • Factor Q3: ${record.fcQ3Error}
+        • Factor Q4: ${record.fcQ4Error}
 
-            FECHAS DE REGISTRO
-            • Fecha interna equipo: $deviceDate
-            • Momento de guardado: $saveDate
-        """.trimIndent()
+        FECHAS DE REGISTRO
+        • Fecha interna equipo: $deviceDate
+        • Momento de guardado: $saveDate
+    """.trimIndent()
 
         // Usamos el diálogo nativo de Material Design
         com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
@@ -168,6 +168,7 @@ class NotificationsFragment : Fragment() {
             .show()
     }
 
+
     // --- FUNCIÓN DE EXPORTACIÓN (Movida aquí) ---
     private fun exportDatabaseToCSV() {
         binding.btnExportCsv.isEnabled = false
@@ -177,7 +178,13 @@ class NotificationsFragment : Fragment() {
                 val database = com.example.nfc_reader_01.collection.AppDatabase.getDatabase(requireContext())
                 val records = database.recordDao().getAllRecords()
 
-                if (records.isEmpty()) return@launch
+                if (records.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(requireContext(), "No hay registros en el lote para exportar", Toast.LENGTH_SHORT).show()
+                        binding.btnExportCsv.isEnabled = true
+                    }
+                    return@launch
+                }
 
                 val exportDir = java.io.File(requireContext().cacheDir, "exports")
                 if (!exportDir.exists()) exportDir.mkdirs()
@@ -185,12 +192,12 @@ class NotificationsFragment : Fragment() {
                 val file = java.io.File(exportDir, "Lote_Configuraciones_${System.currentTimeMillis()}.csv")
                 val writer = java.io.FileWriter(file)
 
-                // Encabezados
-                writer.append("ID,Serial_Number,Firmware,K_Meter,Stability,StopTime,Temp_Raw_Low,Temp_Raw_High,Temp_Cal_Low,Temp_Cal_High,Q1_Error,Q2_Error,Q0.35_Error,Q1.00_Error,Q10.0L_Error,Q3_Error,Device_Config_Date,Timestamp\n")
+                // Encabezados (Actualizados a 8 puntos)
+                writer.append("ID,Serial_Number,Firmware,K_Meter,Low_Stability,High_Stability,Temp_Raw_Low,Temp_Raw_High,Temp_Cal_Low,Temp_Cal_High,Q1_Error,Q2_Error,P3_Error,P4_Error,10.0L_Error,P5_Error,Q3_Error,Q4_Error,Device_Config_Date,Timestamp\n")
 
-                // Datos
+                // Datos (Usando los nombres de variables nuevos y corrigiendo la coma doble)
                 for (record in records) {
-                    writer.append("${record.id},${record.serialNumber},${record.firmwareVersion},${record.kMeter},${record.low_stability},,${record.high_stability},${record.tempRawLow},${record.tempRawHigh},${record.tempCalLow},${record.tempCalHigh},${record.fcQ1Error},${record.fcQ2Error},${record.fcQ035Error},${record.fcQ100Error},${record.fcQ10LmError},${record.fcQ3Error},")
+                    writer.append("${record.id},${record.serialNumber},${record.firmwareVersion},${record.kMeter},${record.lowStability},${record.highStability},${record.tempRawLow},${record.tempRawHigh},${record.tempCalLow},${record.tempCalHigh},${record.fcQ1Error},${record.fcQ2Error},${record.fcP3Error},${record.fcP4Error},${record.fc10LmError},${record.fcP5Error},${record.fcQ3Error},${record.fcQ4Error},")
 
                     val deviceDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(record.deviceLastConfigDate))
                     val exportDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(record.timestamp))

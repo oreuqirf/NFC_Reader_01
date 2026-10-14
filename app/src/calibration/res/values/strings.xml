@@ -103,5 +103,7 @@
 
     <string name="nav_title_shutdown">Device Shutdown</string>
 
+    <string name="toast_missing_volume">Please enter the Volume</string>
+
 </resources>
 

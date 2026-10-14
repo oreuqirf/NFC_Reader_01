@@ -329,6 +329,11 @@ class DashboardFragment : Fragment() {
             binding.editTextTempCalibrated.setText(String.format(Locale.US, "%.2f °C", floatTempCal))
             binding.editTextLuxThreshold.setText(String.format(Locale.US, "%.0f", floatLuxThreshold))
 
+            binding.editTextIndex.setText("${engineering.index}")
+            binding.editTextError.setText("${engineering.error}")
+            binding.editTextGain.setText("${engineering.gain}")
+            binding.editTextMaxRaw.setText("${engineering.maxRaw}")
+
             binding.editTextLux.setText(String.format(Locale.US, "%.0f", floatLux))
             binding.editTextRakFrameCounter.setText("${engineering.rakFrameCounter}")
 
@@ -383,6 +388,10 @@ class DashboardFragment : Fragment() {
         binding.editTextLastTripFlow.setText("")
         binding.editTextFlowUncal.tag = null
         binding.editTextLastTripFlow.tag = null
+        binding.editTextIndex.setText("")
+        binding.editTextError.setText("")
+        binding.editTextGain.setText("")
+        binding.editTextMaxRaw.setText("")
     }
 
     override fun onDestroyView() {

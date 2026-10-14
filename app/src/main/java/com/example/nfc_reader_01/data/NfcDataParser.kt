@@ -30,16 +30,26 @@ data class ProcessData(
 
 data class ConfigurationData(
     val kMeter: Float,
-    val low_stability: Float,   // 0-100%
-    val high_stability: Float,    // 0-100%
+    val lowStability: Float,
+    val highStability: Float,
+
     val lowTempUnscaled: Float, val highTempUnscaled: Float,
     val lowTempCorrected: Float, val highTempCorrected: Float,
-    val fcQ1_flow: Float, val fcQ1_temperature: Float, val fcQ1_error: Float,
-    val fcQ2_flow: Float, val fcQ2_temperature: Float, val fcQ2_error: Float,
-    val fcQ0_35_flow: Float, val fcQ0_35_temperature: Float, val fcQ0_35_error: Float,
-    val fcQ1_00_flow: Float, val fcQ1_00_temperature: Float, val fcQ1_00_error: Float,
-    val fcQ10_00_flow: Float, val fcQ10_00_temperature: Float, val fcQ10_00_error: Float,
-    val fcQ3_flow: Float, val fcQ3_temperature: Float, val fcQ3_error: Float,
+
+    // ¡Solo los 8 errores (32 bytes en total)!
+    val fcQ1_error: Float,
+    val fcQ2_error: Float,
+    val fcP3_error: Float,
+    val fcP4_error: Float,
+    val fcP5_error: Float,
+    val fcP6_error: Float,
+    val fcP7_error: Float,
+    val fcP8_error: Float,
+    val fc10_00_error: Float,
+    val fcP10_error: Float,
+    val fcQ3_error: Float,
+    val fcQ4_error: Float,
+
     val lastConfigurationDate: Int
 )
 
@@ -56,7 +66,11 @@ data class EngineeringData(
     val lux: Int,
     val rakFrameCounter: Int,
     val lastTripFlow: Int,
-    val temperature: Int
+    val temperature: Int,
+    val index: Int,
+    val error: Int,
+    val gain: Int,
+    val maxRaw: Int
 )
 
 // -------------------------------------------------------------------------
@@ -119,76 +133,83 @@ object NfcDataParser {
         return ProcessData(volume, flowRate, temperature, battery, statusFlags, directTime, reverseTime, noFlowTime, leakageTime)
     }
 
-    // --- 0x03 CONFIGURACIÓN ---
     fun parseConfigData(data: ByteArray): ConfigurationData {
-        // Payload real: 106 bytes
-        if (data.size < 104) throw IllegalArgumentException("Datos insuficientes Configuración (${data.size} bytes)")
+        val expectedSize = 80 // 3 (config) + 4 (temps) + 12 (errores de 4 bytes) + 1 (fecha int) = ~80 bytes mínimo
+        if (data.size < 64) throw IllegalArgumentException("Datos insuficientes (${data.size} bytes)")
         val buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN)
 
-        // CORRECCIÓN: Lógica unificada
-        if (data.size > 100 && data[0] == 0x83.toByte()) {
+        if (data.size > (expectedSize - 4) && data[0] == 0x83.toByte()) {
             buffer.position(1)
         } else {
             buffer.position(0)
         }
 
         val kMeter = buffer.float
+        val lowStability = buffer.float
+        val highStability = buffer.float
 
-        val stability = buffer.float
-        val stopTime  = buffer.float
+        // Leyendo temperaturas desescaladas como enteros (según corregimos antes) y corregidas como floats
+        val lowTempUnscaled = buffer.int.toFloat() / 10.0f
+        val highTempUnscaled = buffer.int.toFloat() / 10.0f
+        val lowTempCorrected = buffer.float
+        val highTempCorrected = buffer.float
 
-        val lowTempUnscaled = buffer.float; val highTempUnscaled = buffer.float
-        val lowTempCorrected = buffer.float; val highTempCorrected = buffer.float
-
-        // Q1
-        val q1_flow = buffer.float; val q1_error = buffer.float; val q1_temp = buffer.float
-        // Q2
-        val q2_flow = buffer.float; val q2_error = buffer.float; val q2_temp = buffer.float
-        // 0.35
-        val q035_flow = buffer.float; val q035_error = buffer.float; val q035_temp = buffer.float
-        // 1.00
-        val q100_flow = buffer.float; val q100_error = buffer.float; val q100_temp = buffer.float
-        // 10.00
-        val q10_flow = buffer.float; val q10_error = buffer.float; val q10_temp = buffer.float
-        // Q3
-        val q3_flow = buffer.float; val q3_error = buffer.float; val q3_temp = buffer.float
+        // --- Leer los 12 errores en el orden exacto solicitado ---
+        val fcQ1_error = buffer.float
+        val fcQ2_error = buffer.float
+        val fcP3_error = buffer.float
+        val fcP4_error = buffer.float
+        val fcP5_error = buffer.float
+        val fcP6_error = buffer.float
+        val fcP7_error = buffer.float
+        val fcP8_error = buffer.float
+        val fc10_00_error = buffer.float
+        val fcP10_error = buffer.float
+        val fcQ3_error = buffer.float
+        val fcQ4_error = buffer.float
 
         val lastDate = buffer.int
 
         return ConfigurationData(
-            kMeter, stability, stopTime,
+            kMeter, lowStability, highStability,
             lowTempUnscaled, highTempUnscaled, lowTempCorrected, highTempCorrected,
-            q1_flow, q1_temp, q1_error,
-            q2_flow, q2_temp, q2_error,
-            q035_flow, q035_temp, q035_error,
-            q100_flow, q100_temp, q100_error,
-            q10_flow, q10_temp, q10_error,
-            q3_flow, q3_temp, q3_error,
+            fcQ1_error, fcQ2_error, fcP3_error, fcP4_error,
+            fcP5_error, fcP6_error, fcP7_error, fcP8_error,
+            fc10_00_error, fcP10_error, fcQ3_error, fcQ4_error,
             lastDate
         )
     }
 
-    // --- 0x04 SERIALIZAR ---
     fun serializeConfigData(config: ConfigurationData): ByteArray {
-        val buffer = ByteBuffer.allocate(104).order(ByteOrder.LITTLE_ENDIAN)
-        buffer.putFloat(config.kMeter)
+        val totalSize = 80 // Ajusta al nuevo tamaño exacto
+        val buffer = ByteBuffer.allocate(totalSize).order(ByteOrder.LITTLE_ENDIAN)
 
-        buffer.putFloat(config.low_stability)
-        buffer.putFloat(config.high_stability)
+        buffer.putFloat(config.kMeter)
+        buffer.putFloat(config.lowStability)
+        buffer.putFloat(config.highStability)
 
         buffer.putFloat(config.lowTempUnscaled); buffer.putFloat(config.highTempUnscaled)
         buffer.putFloat(config.lowTempCorrected); buffer.putFloat(config.highTempCorrected)
 
-        buffer.putFloat(config.fcQ1_flow); buffer.putFloat(config.fcQ1_error); buffer.putFloat(config.fcQ1_temperature)
-        buffer.putFloat(config.fcQ2_flow); buffer.putFloat(config.fcQ2_error); buffer.putFloat(config.fcQ2_temperature)
-        buffer.putFloat(config.fcQ0_35_flow); buffer.putFloat(config.fcQ0_35_error); buffer.putFloat(config.fcQ0_35_temperature)
-        buffer.putFloat(config.fcQ1_00_flow); buffer.putFloat(config.fcQ1_00_error); buffer.putFloat(config.fcQ1_00_temperature)
-        buffer.putFloat(config.fcQ10_00_flow); buffer.putFloat(config.fcQ10_00_error); buffer.putFloat(config.fcQ10_00_temperature)
-        buffer.putFloat(config.fcQ3_flow); buffer.putFloat(config.fcQ3_error); buffer.putFloat(config.fcQ3_temperature)
+        // Escribir los 8 errores en orden
+        buffer.putFloat(config.fcQ1_error)
+        buffer.putFloat(config.fcQ2_error)
+        buffer.putFloat(config.fcP3_error)
+        buffer.putFloat(config.fcP4_error)
+        buffer.putFloat(config.fcP5_error)
+        buffer.putFloat(config.fcP6_error)
+        buffer.putFloat(config.fcP7_error)
+        buffer.putFloat(config.fcP8_error)
+        buffer.putFloat(config.fc10_00_error)
+        buffer.putFloat(config.fcP10_error)
+        buffer.putFloat(config.fcQ3_error)
+        buffer.putFloat(config.fcQ4_error)
 
         buffer.putInt(config.lastConfigurationDate)
+
         return buffer.array()
     }
+
 
     // --- 0x05 INGENIERÍA ---
     fun parseEngineeringData(data: ByteArray): EngineeringData {
@@ -212,6 +233,15 @@ object NfcDataParser {
         val last = if (buffer.remaining() >= 4) buffer.int else 0
         val temp = if (buffer.remaining() >= 4) buffer.int else 0
 
-        return EngineeringData(vol, volU, tempU, flowU, ttof, dtof, std, time, luxTh, lux, rak, last, temp)
+        // Lectura de tus 4 nuevas variables
+        val index = if (buffer.remaining() >= 4) buffer.int else 0
+        val error = if (buffer.remaining() >= 4) buffer.int else 0
+        val gain = if (buffer.remaining() >= 4) buffer.int else 0
+        val maxRaw = if (buffer.remaining() >= 4) buffer.int else 0
+
+        return EngineeringData(
+            vol, volU, tempU, flowU, ttof, dtof, std, time,
+            luxTh, lux, rak, last, temp, index, error, gain, maxRaw
+        )
     }
 }

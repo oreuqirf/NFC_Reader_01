@@ -112,4 +112,6 @@
 
     <string name="nav_title_shutdown">Apagado de Equipo</string>
 
+    <string name="toast_missing_volume">Falta completar el Volumen</string>
+
 </resources>

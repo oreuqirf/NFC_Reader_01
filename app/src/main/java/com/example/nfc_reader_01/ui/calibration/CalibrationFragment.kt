@@ -47,12 +47,18 @@ class CalibrationFragment : Fragment() {
 
         // Índices
         private const val IDX_TEMP = 0
-        private const val IDX_FLOW_10L = 1
-        private const val IDX_FLOW_1L = 2
-        private const val IDX_FLOW_035L = 3
-        private const val IDX_FLOW_Q2 = 4
-        private const val IDX_FLOW_Q1 = 5
-        private const val IDX_FLOW_Q3 = 6
+        private const val IDX_FLOW_Q1 = 1
+        private const val IDX_FLOW_Q2 = 2
+        private const val IDX_FLOW_P3 = 3
+        private const val IDX_FLOW_P4 = 4
+        private const val IDX_FLOW_P5 = 5
+        private const val IDX_FLOW_P6 = 6
+        private const val IDX_FLOW_P7 = 7
+        private const val IDX_FLOW_P8 = 8
+        private const val IDX_FLOW_10L = 9
+        private const val IDX_FLOW_P10 = 10
+        private const val IDX_FLOW_Q3 = 11
+        private const val IDX_FLOW_Q4 = 12
 
         // --- NUEVO: ESTADOS DEL BOTÓN RESET ---
         private const val STATE_IDLE = 0    // Rojo (Normal)
@@ -79,6 +85,12 @@ class CalibrationFragment : Fragment() {
     private var dynamicManualOptions: List<Pair<String, Int>> = emptyList()
     private var selectedManualId: Int? = null
 
+    // --- VARIABLES PARA MODO SECUENCIA (BANCO) ---
+    private var isSequenceMode = false
+    private val sequenceOrder = listOf(IDX_FLOW_10L, IDX_FLOW_Q3, IDX_FLOW_Q2, IDX_FLOW_Q1)
+    private var currentSequenceStageIndex = 0 // 0 a 3 (apunta a la lista de arriba)
+    private var currentDeviceInBatch = 1      // 1 a 6
+
     override fun onAttach(context: Context) {
         super.onAttach(context)
         if (context is NfcInteractionListener) {
@@ -101,17 +113,21 @@ class CalibrationFragment : Fragment() {
         binding.textVersion.text = com.example.nfc_reader_01.BuildConfig.VERSION_NAME
 
         setupDropdownAdapter()
-        setManualMode(false)
-        showStep1()
+
+        // --- NUEVO: Iniciamos por defecto en Modo Banco ---
+        setSequenceMode(true)
+
         setupListeners()
         setupObservers()
         setupLanguageButtons()
     }
 
+
     // ... (setupDropdownAdapter, setupLanguageButtons, setAppLocale se mantienen IGUAL) ...
 
     private fun setupDropdownAdapter() {
-        val orderedIds = listOf(IDX_TEMP, IDX_FLOW_Q1, IDX_FLOW_Q2, IDX_FLOW_035L, IDX_FLOW_1L, IDX_FLOW_10L, IDX_FLOW_Q3)
+        val orderedIds = listOf(
+            IDX_TEMP, IDX_FLOW_Q1, IDX_FLOW_Q2, IDX_FLOW_P3, IDX_FLOW_P4,  IDX_FLOW_P5, IDX_FLOW_P6,  IDX_FLOW_P7,  IDX_FLOW_P8,  IDX_FLOW_10L, IDX_FLOW_P10,IDX_FLOW_Q3, IDX_FLOW_Q4)
         dynamicManualOptions = orderedIds.map { id -> Pair(getCalibrationTypeName(id), id) }
         val optionNames = dynamicManualOptions.map { it.first }
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, optionNames)
@@ -135,20 +151,34 @@ class CalibrationFragment : Fragment() {
         AppCompatDelegate.setApplicationLocales(appLocale)
     }
 
+
     private fun setManualMode(enableManual: Boolean) {
         isManualMode = enableManual
         val activeColor = ContextCompat.getColor(requireContext(), R.color.purple_500)
         val inactiveColor = Color.GRAY
+
         showStep1()
+
         if (isManualMode) {
             binding.inputLayoutManualFlow.visibility = View.VISIBLE
-            binding.btnReadMaster.text = getString(R.string.btn_continue_manual)
+
+            // --- ACTUALIZADO: Texto dinámico ---
+            binding.btnReadMaster.text = getString(R.string.btn_transfer)
             binding.btnReadMaster.icon = null
+
+            // 1. Pintamos el botón Manual de morado
             binding.btnModeManual.backgroundTintList = ColorStateList.valueOf(activeColor)
             binding.btnModeManual.setTextColor(Color.WHITE)
+
+            // 2. ¡NUEVO! Despintamos el botón Banco (Batch) a gris/transparente
+            binding.btnModeSequence.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
+            binding.btnModeSequence.setTextColor(inactiveColor)
+
+            // 3. (Mantenemos apagado el Auto por las dudas)
             binding.btnModeAuto.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
             binding.btnModeAuto.setTextColor(inactiveColor)
-            binding.textDetectedFlowType.text = "Manual Mode"
+
+            binding.textDetectedFlowType.text = getString(R.string.text_manual_mode)
             binding.autoCompleteFlowSelector.text.clear()
             selectedManualId = null
         } else {
@@ -186,6 +216,13 @@ class CalibrationFragment : Fragment() {
         setButtonState(binding.btnStartCalibration, true)
         waitingForTransferResult = false
         isTransactionLocked = false
+
+        // NUEVO: Mostrar el botón de salto SOLO si estamos en Modo Secuencia
+        if (isSequenceMode) {
+            binding.btnSkipNextFlow.visibility = View.VISIBLE
+        } else {
+            binding.btnSkipNextFlow.visibility = View.GONE
+        }
     }
 
     private fun showSuccess() {
@@ -202,7 +239,7 @@ class CalibrationFragment : Fragment() {
         binding.layoutStep1.visibility = View.GONE
         binding.layoutStep2.visibility = View.VISIBLE
         binding.layoutSuccess.visibility = View.GONE
-        Toast.makeText(context, "Listo para el siguiente equipo", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, getString(R.string.toast_ready_next_device), Toast.LENGTH_SHORT).show()
     }
 
     private fun setButtonState(button: MaterialButton, isEnabled: Boolean) {
@@ -211,8 +248,6 @@ class CalibrationFragment : Fragment() {
         val disabledColor = Color.GRAY
         button.backgroundTintList = ColorStateList.valueOf(if (isEnabled) primaryColor else disabledColor)
     }
-
-
 
     // --- FUNCIÓN ACTUALIZADA CON TEXTOS TRADUCIBLES ---
     private fun updateResetButtonUI(state: Int) {
@@ -259,16 +294,35 @@ class CalibrationFragment : Fragment() {
         }
     }
 
-
     // --- LISTENERS ---
-
     private fun setupListeners() {
-        binding.btnModeAuto.setOnClickListener { setManualMode(false) }
-        binding.btnModeManual.setOnClickListener { setManualMode(true) }
+
+        // --- ACTUALIZADO: SELECTORES DE MODO ---
+        binding.btnModeAuto.setOnClickListener {
+            setSequenceMode(false) // Apaga secuencia
+            setManualMode(false)   // Apaga manual
+        }
+
+        binding.btnModeManual.setOnClickListener {
+            setSequenceMode(false) // Apaga secuencia
+            setManualMode(true)    // Enciende manual
+        }
+
+        binding.btnModeSequence.setOnClickListener {
+            setManualMode(false)   // Apaga manual
+            setSequenceMode(true)  // Enciende secuencia (Banco)
+        }
+
+        // NOTA: Si agregas un tercer botón para el Modo Secuencia en tu XML (ej. btnModeSequence),
+        // descomenta esta línea:
+        // binding.btnModeSequence.setOnClickListener { setSequenceMode(true) }
 
         // PASO 1
         binding.btnReadMaster.setOnClickListener {
-            if (isManualMode) {
+            // --- ACTUALIZADO: ORDEN DE PRIORIDAD DE MODOS ---
+            if (isSequenceMode) {
+                processSequenceEntry()
+            } else if (isManualMode) {
                 processManualEntry()
             } else {
                 setButtonState(binding.btnReadMaster, false)
@@ -277,7 +331,7 @@ class CalibrationFragment : Fragment() {
             }
         }
 
-        // --- NUEVO: LÓGICA TOGGLE PARA BOTÓN RESET ---
+        // --- LÓGICA TOGGLE PARA BOTÓN RESET (SIN CAMBIOS) ---
         binding.btnResetVolume.setOnClickListener {
             if (resetVolumeState == STATE_PENDING) {
                 // CANCELAR: Si ya estaba pendiente y lo tocan, cancelamos.
@@ -286,7 +340,7 @@ class CalibrationFragment : Fragment() {
                 // Enviamos un comando "seguro" (Lectura) para sobrescribir el comando Reset
                 // y que no se ejecute si el usuario acerca el teléfono por error.
                 listener?.requestNextCommand(CMD_READ_ENGINEERING)
-                Toast.makeText(context, "Reset cancelado", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, getString(R.string.toast_reset_canceled), Toast.LENGTH_SHORT).show()
 
             } else {
                 // ACTIVAR: Si estaba Idle o Success, lo ponemos en espera
@@ -299,58 +353,67 @@ class CalibrationFragment : Fragment() {
         binding.btnStartCalibration.setOnClickListener {
             if (isTransactionLocked) return@setOnClickListener
 
-            val volString = binding.editTextVolPatron.text.toString().replace(',', '.')
-            val tempString = binding.editTextTempPatron.text.toString().replace(',', '.')
-            val volValue = volString.toFloatOrNull()
-            val tempValue = tempString.toFloatOrNull()
+            // 1. Obtenemos el texto y limpiamos letras o espacios
+            val rawVol = binding.editTextVolPatron.text.toString().replace(',', '.')
+            val rawTemp = binding.editTextTempPatron.text.toString().replace(',', '.')
 
+            val volString = rawVol.replace(Regex("[^0-9.-]"), "")
+            val tempString = rawTemp.replace(Regex("[^0-9.-]"), "")
+
+            // 2. Validamos que al menos el Volumen esté completo
+            if (volString.isEmpty()) {
+                Toast.makeText(context, getString(R.string.toast_missing_volume), Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val volValue = volString.toFloatOrNull()
+
+            // LÓGICA INTELIGENTE: Si la temperatura está vacía, usamos 20.0f por defecto
+            val tempValue = if (tempString.isEmpty()) 20.0f else tempString.toFloatOrNull()
+
+            // 3. Si la conversión numérica es exitosa, procedemos
             if (volValue != null && tempValue != null) {
                 isTransactionLocked = true
                 waitingForTransferResult = true
                 setButtonState(binding.btnStartCalibration, false)
 
-                // 1. Aumentamos el buffer a 11 bytes (1 tipo + 4 vol + 4 temp + 2 checksum)
+                // Buffer de 11 bytes (1 tipo + 4 vol + 4 temp + 2 checksum)
                 val buffer = ByteBuffer.allocate(11).order(ByteOrder.LITTLE_ENDIAN)
                 buffer.put(detectedCalibrationType)
                 buffer.putFloat(volValue)   // Índices 1, 2, 3, 4
                 buffer.putFloat(tempValue)  // Índices 5, 6, 7, 8
 
-                // --- NUEVO: Cálculo del Checksum (Suma simple de los 8 bytes) ---
+                // Cálculo del Checksum (Suma simple de los 8 bytes de vol y temp)
                 val dataArray = buffer.array()
                 var checksum = 0
 
-                // Iteramos solo por los 8 bytes de Volumen y Temperatura
                 for (i in 1..8) {
-                    // El "and 0xFF" es crucial porque en Java/Kotlin los bytes son con signo (signed).
-                    // Esto evita que un byte negativo reste valor a la suma, simulando el comportamiento de C.
                     checksum += (dataArray[i].toInt() and 0xFF)
                 }
 
-                // 2. Insertamos el checksum de 16-bits al final (índices 9 y 10)
                 buffer.putShort(checksum.toShort())
-                // -----------------------------------------------------------------
 
-                Log.d(
-                    TAG,
-                    "Enviando Calibración 0x13. Type=$detectedCalibrationType | Checksum=$checksum"
-                )
+                Log.d(TAG, "Enviando Calibración 0x13. Type=$detectedCalibrationType | Checksum=$checksum (Vol=$volValue, Temp=$tempValue)")
 
                 sharedViewModel.setConfigDataToWrite(buffer.array())
-                Toast.makeText(context, getString(R.string.toast_transferring), Toast.LENGTH_SHORT)
-                    .show()
+                Toast.makeText(context, getString(R.string.toast_transferring), Toast.LENGTH_SHORT).show()
                 listener?.requestNextCommand(CMD_CALIBRATE_FLOW)
 
             } else {
-                Toast.makeText(
-                    context,
-                    getString(R.string.toast_invalid_values),
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(context, getString(R.string.toast_invalid_values), Toast.LENGTH_SHORT).show()
             }
         }
 
         binding.btnResetFlow.setOnClickListener { showStep1() }
         binding.btnFinishSuccess.setOnClickListener { prepareNextDeviceSameValues() }
+
+        // NUEVO: Listener para el botón de Saltar Caudal
+        binding.btnSkipNextFlow.setOnClickListener {
+            skipToNextSequenceStage()
+        }
+
+        // ...
+
     }
 
     private fun processManualEntry() {
@@ -361,17 +424,19 @@ class CalibrationFragment : Fragment() {
         }
         binding.inputLayoutManualFlow.error = null
         detectedCalibrationType = manualId.toByte()
+
         val typeName = dynamicManualOptions.find { it.second == manualId }?.first ?: "Manual"
-        binding.textDetectedFlowType.text = "$typeName (Manual)"
+        // --- ACTUALIZADO: Texto dinámico ---
+        binding.textDetectedFlowType.text = getString(R.string.mode_manual_suffix, typeName)
+
+        binding.btnStartCalibration.text = getString(R.string.btn_transfer)
+
         binding.editTextVolPatron.setText("")
         binding.editTextTempPatron.setText("")
         showStep2()
     }
 
-    // --- OBSERVERS ---
-
-
-    // --- OBSERVER ACTUALIZADO CON TIMER DE 3 SEGUNDOS ---
+    // --- OBSERVER ACTUALIZADO CON TIMER Y MODO SECUENCIA ---
     private fun setupObservers() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -379,7 +444,7 @@ class CalibrationFragment : Fragment() {
                 launch {
                     sharedViewModel.engineeringResponseData.collect { data ->
                         setButtonState(binding.btnReadMaster, true)
-                        if (!isManualMode && data != null && data.size >= MIN_ENGINEERING_PAYLOAD_SIZE) {
+                        if (!isManualMode && !isSequenceMode && data != null && data.size >= MIN_ENGINEERING_PAYLOAD_SIZE) {
                             if (binding.layoutStep1.visibility == View.VISIBLE) {
                                 processReadData(data)
                             }
@@ -396,11 +461,18 @@ class CalibrationFragment : Fragment() {
 
                         when (state) {
                             is NfcState.Success -> {
-                                // A. ÉXITO EN CALIBRACIÓN NORMAL
+                                // A. ÉXITO EN CALIBRACIÓN NORMAL O SECUENCIA
                                 if (waitingForTransferResult) {
                                     waitingForTransferResult = false
-                                    showSuccess()
                                     Toast.makeText(context, getString(R.string.msg_command_success), Toast.LENGTH_SHORT).show()
+
+                                    if (isSequenceMode) {
+                                        // Si estamos en modo banco, la app auto-avanza al siguiente equipo
+                                        advanceSequenceBatch()
+                                    } else {
+                                        // Comportamiento original para Auto o Manual
+                                        showSuccess()
+                                    }
                                 }
 
                                 // B. ÉXITO EN RESET VOLUMEN (Lógica del Timer)
@@ -425,7 +497,7 @@ class CalibrationFragment : Fragment() {
                                     isTransactionLocked = false
                                     waitingForTransferResult = false
                                     setButtonState(binding.btnStartCalibration, true)
-                                    Toast.makeText(context, "Error: ${state.errorMessage}", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, getString(R.string.toast_error_prefix, state.errorMessage), Toast.LENGTH_LONG).show()
                                 }
 
                                 // Si falla el Reset, volvemos a Rojo inmediatamente
@@ -442,7 +514,6 @@ class CalibrationFragment : Fragment() {
             }
         }
     }
-
 
     private fun processReadData(data: ByteArray) {
         try {
@@ -473,25 +544,59 @@ class CalibrationFragment : Fragment() {
 
     private fun determineCalibrationIndex(flowValue: Float): Int {
         return when {
+            // flowValue < 0.5f -> IDX_TEMP
+            // flowValue < 8.0f -> IDX_FLOW_Q1
+            // flowValue < 15.0f -> IDX_FLOW_Q2
+            // flowValue < 30.0f -> IDX_FLOW_P3
+            // flowValue < 100.0f -> IDX_FLOW_P4
+            // flowValue < 1500.0f -> IDX_FLOW_10L
+            // else -> IDX_FLOW_Q3
+            // flowValue < 0.5f -> IDX_TEMP
+            // flowValue < 13.0f -> IDX_FLOW_Q1
+            // flowValue < 24.0f -> IDX_FLOW_Q2
+            // flowValue < 48.0f -> IDX_FLOW_P3
+            // flowValue < 160.0f -> IDX_FLOW_P4
+            // flowValue < 1300.0f -> IDX_FLOW_10L
+            // flowValue < 3000.0f -> IDX_FLOW_P6
+            // flowValue < 4300.0f -> IDX_FLOW_Q3
+
             flowValue < 0.5f -> IDX_TEMP
-            flowValue < 8.0f -> IDX_FLOW_Q1
-            flowValue < 15.0f -> IDX_FLOW_Q2
-            flowValue < 30.0f -> IDX_FLOW_035L
-            flowValue < 100.0f -> IDX_FLOW_1L
-            flowValue < 1500.0f -> IDX_FLOW_10L
-            else -> IDX_FLOW_Q3
+
+            flowValue < 13.0f -> IDX_FLOW_Q1      // Intacto (< 13.0)
+            flowValue < 24.0f -> IDX_FLOW_Q2      // Intacto (< 24.0)
+
+            // --- Los 6 puntos intermedios entre Q2 (24) y 10L (600) ---
+            flowValue < 40.0f -> IDX_FLOW_P3
+            flowValue < 70.0f -> IDX_FLOW_P4
+            flowValue < 120.0f -> IDX_FLOW_P5     // Nuevo punto
+            flowValue < 200.0f -> IDX_FLOW_P6     // Nuevo punto
+            flowValue < 350.0f -> IDX_FLOW_P7     // Nuevo punto
+            flowValue < 500.0f -> IDX_FLOW_P8     // Nuevo punto
+
+            // --- Puntos superiores ---
+            flowValue < 1300.0f -> IDX_FLOW_10L   // (600 L/h nominales)
+            flowValue < 2000.0f -> IDX_FLOW_P10   // Ajustar según corresponda
+            flowValue < 4300.0f -> IDX_FLOW_Q3    // (4000 L/h nominales)
+            else -> IDX_FLOW_Q4                   // (5000 L/h nominales)
         }
     }
+
 
     private fun getCalibrationTypeName(index: Int): String {
         return when (index) {
             IDX_TEMP -> getString(R.string.cal_type_temp_only)
-            IDX_FLOW_10L -> getString(R.string.cal_type_flow_10l)
-            IDX_FLOW_1L -> getString(R.string.cal_type_flow_1l)
-            IDX_FLOW_035L -> getString(R.string.cal_type_flow_035l)
-            IDX_FLOW_Q2 -> getString(R.string.cal_type_flow_q2)
             IDX_FLOW_Q1 -> getString(R.string.cal_type_flow_q1)
+            IDX_FLOW_Q2 -> getString(R.string.cal_type_flow_q2)
+            IDX_FLOW_P3 -> getString(R.string.cal_type_flow_p3)
+            IDX_FLOW_P4 -> getString(R.string.cal_type_flow_p4)
+            IDX_FLOW_P5 -> getString(R.string.cal_type_flow_p5)
+            IDX_FLOW_P6 -> getString(R.string.cal_type_flow_p6)
+            IDX_FLOW_P7 -> getString(R.string.cal_type_flow_p7)
+            IDX_FLOW_P8 -> getString(R.string.cal_type_flow_p8)
+            IDX_FLOW_10L -> getString(R.string.cal_type_flow_10l)
+            IDX_FLOW_P10 -> getString(R.string.cal_type_flow_p10)
             IDX_FLOW_Q3 -> getString(R.string.cal_type_flow_q3)
+            IDX_FLOW_Q4 -> getString(R.string.cal_type_flow_q4)
             else -> getString(R.string.cal_type_unknown)
         }
     }
@@ -505,4 +610,90 @@ class CalibrationFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+
+    private fun setSequenceMode(enable: Boolean) {
+        isSequenceMode = enable
+        val activeColor = ContextCompat.getColor(requireContext(), R.color.purple_500)
+        val inactiveColor = Color.GRAY
+
+        showStep1()
+
+        if (isSequenceMode) {
+            isManualMode = false
+            currentSequenceStageIndex = 0
+            currentDeviceInBatch = 1
+
+            binding.inputLayoutManualFlow.visibility = View.GONE
+
+            // --- ACTUALIZADO: Texto dinámico ---
+            val firstFlow = getCalibrationTypeName(sequenceOrder[0])
+            binding.btnReadMaster.text = getString(R.string.btn_start_batch, firstFlow)
+            binding.btnReadMaster.icon = null
+
+            binding.editTextTempPatron.setText("20.0")
+            binding.inputLayoutTempPatron.isEnabled = false
+
+            binding.btnModeSequence.backgroundTintList = ColorStateList.valueOf(activeColor)
+            binding.btnModeSequence.setTextColor(Color.WHITE)
+            binding.btnModeManual.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
+            binding.btnModeManual.setTextColor(inactiveColor)
+        } else {
+            binding.inputLayoutTempPatron.isEnabled = true
+            binding.editTextTempPatron.setText("")
+        }
+    }
+
+    private fun advanceSequenceBatch() {
+        currentDeviceInBatch++
+
+        if (currentDeviceInBatch > 6) {
+            // Si pasamos los 6 equipos, salta automáticamente
+            skipToNextSequenceStage()
+        } else {
+            val typeName = getCalibrationTypeName(sequenceOrder[currentSequenceStageIndex])
+            binding.textDetectedFlowType.text = getString(R.string.text_device_step, typeName, currentDeviceInBatch)
+            binding.btnStartCalibration.text = getString(R.string.btn_transfer_device, currentDeviceInBatch)
+
+            prepareNextDeviceSameValues()
+        }
+    }
+
+    private fun skipToNextSequenceStage() {
+        currentDeviceInBatch = 1
+        currentSequenceStageIndex++
+
+        if (currentSequenceStageIndex >= sequenceOrder.size) {
+            // Terminó el lote completo
+            Toast.makeText(context, getString(R.string.toast_batch_complete), Toast.LENGTH_LONG).show()
+            currentSequenceStageIndex = 0
+
+            // LÓGICA NUEVA: El botón solo avisa "LOTE COMPLETO"
+            binding.btnReadMaster.text = getString(R.string.btn_batch_complete)
+
+            showStep1()
+        } else {
+            // Simplemente pasa al siguiente caudal
+            val nextFlow = getCalibrationTypeName(sequenceOrder[currentSequenceStageIndex])
+            Toast.makeText(context, getString(R.string.toast_change_valve, nextFlow), Toast.LENGTH_LONG).show()
+            binding.btnReadMaster.text = getString(R.string.btn_start_batch, nextFlow)
+            showStep1()
+        }
+    }
+
+
+    private fun processSequenceEntry() {
+        detectedCalibrationType = sequenceOrder[currentSequenceStageIndex].toByte()
+        val typeName = getCalibrationTypeName(sequenceOrder[currentSequenceStageIndex])
+
+        // --- ACTUALIZADO: Textos dinámicos ---
+        binding.textDetectedFlowType.text = getString(R.string.text_device_step, typeName, currentDeviceInBatch)
+        binding.btnStartCalibration.text = getString(R.string.btn_transfer_device, currentDeviceInBatch)
+
+        if (currentDeviceInBatch == 1) {
+            binding.editTextVolPatron.setText("")
+        }
+
+        showStep2()
+    }
+
 }

@@ -35,6 +35,7 @@ import java.io.IOException
 import java.nio.charset.StandardCharsets
 import kotlin.experimental.and
 import android.util.Log
+import com.example.nfc_reader_01.BuildConfig
 
 // --------------------------------------------------------------------------
 // --- CONSTANTES DE PROTOCOLO Y NDEF ---
@@ -72,6 +73,7 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
 
     private lateinit var binding: ActivityMainBinding
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -79,12 +81,20 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 2. Control de Versiones (Flavors)
+        // 2. Control visual de la barra de navegación inferior
         if (BuildConfig.UI_MODE != "FULL") {
+            // Ocultamos la botonera de abajo para que el operador no pueda salir
             binding.navView.visibility = View.GONE
         }
 
-        // 3. Inicializaciones
+        // 3. Cambiamos el título de la barra superior según el modo
+        when (BuildConfig.UI_MODE) {
+            "CALIBRATION" -> supportActionBar?.title = "MS206 - Calibración"
+            "SHUTDOWN" -> supportActionBar?.title = "MS206 - Apagado Rápido"
+            "FULL" -> supportActionBar?.title = "MS206 - Herramienta Completa"
+        }
+
+        // 4. Inicializaciones
         initAudioSystems()
         setupNavigation()
         setupNfc()
@@ -133,12 +143,14 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
         } catch (e: Exception) { /* Ignorar */ }
     }
 
+
     private fun setupNavigation() {
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.nav_host_fragment_activity_main) as NavHostFragment
         val navController = navHostFragment.navController
 
         if (BuildConfig.UI_MODE == "FULL") {
+            // MODO INGENIERO: Todo habilitado
             val appBarConfiguration = AppBarConfiguration(
                 setOf(
                     R.id.navigation_home,
@@ -149,7 +161,26 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
             )
             setupActionBarWithNavController(navController, appBarConfiguration)
             binding.navView.setupWithNavController(navController)
+
         } else {
+            // MODO OPERADOR: Aislamos la aplicación
+
+            // 1. Obtenemos el "mapa" (grafo) de navegación de la app
+            // Nota: Asegúrate de que el archivo XML se llame 'mobile_navigation', si se llama distinto, cámbialo aquí.
+            val navGraph = navController.navInflater.inflate(R.navigation.mobile_navigation)
+
+            // 2. Cambiamos la pantalla de inicio por defecto según la versión
+            if (BuildConfig.UI_MODE == "CALIBRATION") {
+                // AQUÍ ESTABA EL ERROR: Usamos el ID real revelado por tu Logcat
+                navGraph.setStartDestination(R.id.navigation_calibration)
+            }
+            // else if (BuildConfig.UI_MODE == "SHUTDOWN") {
+            //     navGraph.setStartDestination(R.id.navigation_lo_que_sea)
+            // }
+
+            // 3. Cargamos el mapa modificado al controlador
+            navController.graph = navGraph
+
             val appBarConfiguration = AppBarConfiguration(navController.graph)
             setupActionBarWithNavController(navController, appBarConfiguration)
         }
@@ -385,14 +416,16 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
         val CMD_CALIBRATE_FLOW: Byte = 0x13
 
         return when (commandId) {
-            CMD_WRITE_CONFIG -> {
-                if (data?.size == 104) {
-                    byteArrayOf(commandId) + data
-                } else null
-            }
 
+            CMD_WRITE_CONFIG -> {
+                if (data?.size == NfcConstants.CONFIG_BYTE_SIZE) {
+                    byteArrayOf(commandId) + data
+                } else {
+                    Log.e("MainActivity", "!!! ERROR: Tamaño incorrecto para 0x04 (Config). Esperados 80, llegaron ${data?.size}")
+                    null
+                }
+            }
             CMD_CALIBRATE_FLOW -> {
-                // 2. VERIFICAR LA CONDICIÓN
                 if (data?.size == 11) {
                     val packet = byteArrayOf(commandId) + data
                     Log.e("MainActivity", ">>> PACKET OK. Enviando ${packet.size} bytes: ${packet.joinToString(" ") { "%02X".format(it) }}")
@@ -406,7 +439,7 @@ class MainActivity : AppCompatActivity(), NfcInteractionListener {
             else -> {
                 if (data != null && data.isNotEmpty()) byteArrayOf(commandId) + data else byteArrayOf(commandId)
             }
-        }
+       }
     }
 
     private fun executeNdefFormatAndWriteCommand(ndefFormatable: NdefFormatable, commandId: Byte): Boolean {

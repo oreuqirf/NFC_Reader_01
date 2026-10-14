@@ -77,9 +77,7 @@ class NfcTransactionManager(
         }
     }
 
-    /**
-     * Maneja la lógica de escritura con sus respectivos fallbacks.
-     */
+
     private suspend fun handleWriteTransaction(
         commandId: Byte,
         ndef: Ndef?,
@@ -88,40 +86,81 @@ class NfcTransactionManager(
     ) {
         var success = false
 
-        // 1. Intentar escritura NDEF estándar
-        if (ndef != null) {
-            success = executeNdefWriteCommand(ndef, commandId)
-        }
-
-        // 2. Intentar formateo y escritura (si no es NDEF pero es formateable)
-        if (!success && ndefFormatable != null) {
-            success = executeNdefFormatAndWriteCommand(ndefFormatable, commandId)
-        }
-
-        // 3. Fallback Avanzado: Forzar CC con NfcV (si todo lo anterior falla)
-        if (!success && nfcV != null) {
-            scope.launch { LogManager.log("Activando Fallback Avanzado: Formateo CC via NfcV.") }
-            val formatSuccess = executeNfcVForceFormatOnlyFallback(nfcV)
-
-            if (formatSuccess) {
-                viewModel.setUiMessage("Primer Scan FORZADO (NfcV) OK. ¡Acerque el TAG nuevamente!")
-                viewModel.emitWriteStatus("FALLBACK NfcV OK: TAG formateado. Escanee de nuevo.")
-            } else {
-                val errorMsg = "ERROR: Fallo al forzar escritura/formato. TAG sin soporte o bloqueado."
-                viewModel.setUiMessage(errorMsg)
-                viewModel.emitWriteStatus("ERROR NfcV: Fallo forzado.")
+        // --- SOLUCIÓN: SI ES CONFIGURACIÓN (80 BYTES), USAMOS NFCV POR BLOQUES DIRECTAMENTE ---
+        if (commandId == CMD_WRITE_CONFIG && nfcV != null) {
+            val configData = viewModel.configDataToWrite.value
+            if (configData != null && configData.size == NfcConstants.CONFIG_BYTE_SIZE) {
+                scope.launch { LogManager.log("Iniciando escritura robusta por bloques NfcV (${configData.size} bytes)...") }
+                success = executeNfcVWriteConfigBlocks(nfcV, commandId, configData)
             }
-            return
         }
 
-        // Resultado final de la escritura NDEF
+        // --- SI NO ES CONFIGURACIÓN O FALLÓ, USAMOS NDEF ESTÁNDAR ---
+        if (!success) {
+            if (ndef != null) {
+                success = executeNdefWriteCommand(ndef, commandId)
+            } else if (ndefFormatable != null) {
+                success = executeNdefFormatAndWriteCommand(ndefFormatable, commandId)
+            }
+        }
+
         if (success) {
             viewModel.clearCommand()
-        } else if (!success && nfcV == null) {
-            // Solo reportar error si no se intentó el fallback NfcV (que maneja sus propios errores)
-            viewModel.setUiMessage("ERROR: Fallo al procesar comando. TAG no soportado.")
+            viewModel.setUiMessage("¡Escritura exitosa! Acerque el TAG para leer respuesta.")
+            viewModel.emitWriteStatus("Escritura OK. Comando enviado.")
+        } else {
+            val totalBytesExpected = NfcConstants.CONFIG_BYTE_SIZE + 1
+            val errorMsg = "ERROR: No se pudo completar la escritura de $totalBytesExpected bytes. Reintente."
+            scope.launch { LogManager.log(errorMsg) }
+            viewModel.setUiMessage(errorMsg)
+            viewModel.emitWriteStatus("ERROR: Fallo en transacción. Reintente.")
         }
     }
+
+
+    private fun executeNfcVWriteConfigBlocks(nfcV: NfcV, commandId: Byte, configData: ByteArray): Boolean {
+        val fullPayload = byteArrayOf(commandId) + configData // 1 byte de comando + 80 bytes = 81 bytes
+        val flags: Byte = 0x02
+        val cmdWrite: Byte = 0x21.toByte() // Write Single Block (ISO 15693)
+        val startBlock = 3 // Bloque inicial donde el MSP430 espera recibir los datos
+
+        return try {
+            if (!nfcV.isConnected) nfcV.connect()
+
+            val blockSize = 4
+            val totalBlocks = (fullPayload.size + blockSize - 1) / blockSize
+
+            for (i in 0 until totalBlocks) {
+                val blockIndex = startBlock + i
+                val startByte = i * blockSize
+                val endByte = minOf(startByte + blockSize, fullPayload.size)
+
+                var blockData = fullPayload.copyOfRange(startByte, endByte)
+                if (blockData.size < blockSize) {
+                    blockData += ByteArray(blockSize - blockData.size) { 0x00 }
+                }
+
+                val cmd = byteArrayOf(flags, cmdWrite, blockIndex.toByte()) + blockData
+                val resp = nfcV.transceive(cmd)
+
+                if (resp.isEmpty() || resp[0].and(0x01.toByte()) != 0.toByte()) {
+                    Log.e(TAG, "Error escribiendo bloque $blockIndex via NfcV")
+                    return false
+                }
+
+                // Pausa fundamental para evitar desbordes en la EEPROM física
+                Thread.sleep(22)
+            }
+
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Excepción en escritura NfcV por bloques: ${e.message}", e)
+            false
+        } finally {
+            try { nfcV.close() } catch (_: IOException) {}
+        }
+    }
+
 
     /**
      * Maneja la lectura de la respuesta del TAG.
@@ -149,14 +188,20 @@ class NfcTransactionManager(
     private fun executeNdefWriteCommand(ndef: Ndef, commandId: Byte): Boolean {
         val payload = createPayload(commandId) ?: return false
         val message = NdefMessage(NdefRecord.createMime(MIME_COMMAND_TYPE, payload))
-        val logMsg = "Escribiendo comando 0x${commandId.toHexString()} (${payload.size} bytes)..."
+        val messageSize = message.toByteArray().size
 
+        // LOG MEJORADO PARA DETECTAR PROBLEMAS DE TAMAÑO
+        val logMsg = "Escribiendo comando 0x${commandId.toHexString()} (Payload: ${payload.size}b, NDEF Total: ${messageSize}b, Máx Soportado por TAG: ${ndef.maxSize}b)..."
         scope.launch { LogManager.log(logMsg) }
 
         return try {
             if (!ndef.isConnected) ndef.connect()
             if (!ndef.isWritable) throw IOException("TAG no es escribible")
-            if (ndef.maxSize < message.toByteArray().size) throw IOException("Mensaje demasiado grande")
+
+            // AQUÍ ES DONDE PROBABLEMENTE ESTÁ CHOCANDO
+            if (ndef.maxSize < messageSize) {
+                throw IOException("Mensaje demasiado grande: requiere $messageSize bytes, el TAG solo soporta ${ndef.maxSize} bytes")
+            }
 
             ndef.writeNdefMessage(message)
 
@@ -173,6 +218,7 @@ class NfcTransactionManager(
             try { ndef.close() } catch (_: IOException) {}
         }
     }
+
 
     private fun executeNdefFormatAndWriteCommand(formatable: NdefFormatable, commandId: Byte): Boolean {
         val payload = createPayload(commandId) ?: return false
@@ -199,29 +245,47 @@ class NfcTransactionManager(
     }
 
     private fun executeNfcVForceFormatOnlyFallback(nfcV: NfcV): Boolean {
-        // Implementación de bajo nivel para escribir el Capability Container (CC)
-        val ccBlock = byteArrayOf(0xE1.toByte(), 0x40.toByte(), 0x00, 0x40) // Max size 64 bytes
+        // Bloques 0 y 1: Capability Container de 8KB (E2 40 00 01 00 00 04 00)
+        val block0 = byteArrayOf(0xE2.toByte(), 0x40.toByte(), 0x00, 0x01)
+        val block1 = byteArrayOf(0x00, 0x00, 0x04.toByte(), 0x00)
+
+        // Bloque 2: TLV NDEF Vacío (0x03=Mensaje NDEF, 0x00=Longitud cero, 0xFE=Terminador)
+        val block2 = byteArrayOf(0x03, 0x00, 0xFE.toByte(), 0x00)
+
         val flags: Byte = 0x02
-        val cmdWrite: Byte = 0x21.toByte()
+        val cmdWrite: Byte = 0x21.toByte() // Comando ISO 15693: Write Single Block
 
         return try {
             if (!nfcV.isConnected) nfcV.connect()
-            val cmd = byteArrayOf(flags, cmdWrite, 0x00) + ccBlock
-            val response = nfcV.transceive(cmd)
 
-            if (response.isEmpty() || (response.size == 1 && response[0].and(0x01) == 0.toByte())) {
-                true
-            } else {
-                scope.launch { LogManager.log("ERROR NfcV CC: Código ${response.toHexString()}") }
-                false
-            }
+            // --- 1. Escribir Bloque 0 ---
+            var cmd = byteArrayOf(flags, cmdWrite, 0x00) + block0
+            var resp = nfcV.transceive(cmd)
+            // Validar si está vacío o si el bit de error (0x01) está encendido
+            if (resp.isEmpty() || resp[0].and(0x01.toByte()) != 0.toByte()) return false
+
+            Thread.sleep(25) // Pausa vital para que la EEPROM física guarde el bloque
+
+            // --- 2. Escribir Bloque 1 ---
+            cmd = byteArrayOf(flags, cmdWrite, 0x01) + block1
+            resp = nfcV.transceive(cmd)
+            if (resp.isEmpty() || resp[0].and(0x01.toByte()) != 0.toByte()) return false
+
+            Thread.sleep(25) // Pausa vital
+
+            // --- 3. Escribir Bloque 2 (NDEF Vacío) ---
+            cmd = byteArrayOf(flags, cmdWrite, 0x02) + block2
+            resp = nfcV.transceive(cmd)
+            if (resp.isEmpty() || resp[0].and(0x01.toByte()) != 0.toByte()) return false
+
+            true
         } catch (e: Exception) {
-            handleException(e, "Fallback NfcV")
             false
         } finally {
             try { nfcV.close() } catch (_: IOException) {}
         }
     }
+
 
     private fun executeNdefReadResponse(ndef: Ndef) {
         val message = ndef.ndefMessage ?: return
@@ -248,18 +312,25 @@ class NfcTransactionManager(
 
     // --- HELPERS ---
 
+
     private fun createPayload(commandId: Byte): ByteArray? {
         return if (commandId == CMD_WRITE_CONFIG) {
             val data = viewModel.configDataToWrite.value
-            if (data == null || data.size != 96) {
-                viewModel.setUiMessage("ERROR: Datos de configuración incompletos.")
-                viewModel.emitWriteStatus("ERROR: Configuración no lista.")
+            if (data == null || data.size != NfcConstants.CONFIG_BYTE_SIZE) { // Usamos la constante CONFIG_BYTE_SIZE (80)
+                val currentSize = data?.size ?: 0
+                val errorMsg = "ERROR: Configuración inválida. Se esperaban ${NfcConstants.CONFIG_BYTE_SIZE} bytes, pero hay $currentSize bytes listos."
+                scope.launch { LogManager.log(errorMsg) }
+                viewModel.setUiMessage("Error: Tamaño de configuración incorrecto.")
+                viewModel.emitWriteStatus("ERROR: Faltan datos o el tamaño no coincide.")
                 null
             } else {
-                byteArrayOf(commandId) + data
+                val fullPayload = byteArrayOf(commandId) + data // 1 byte de comando + 80 bytes de config = 81 bytes
+                scope.launch { LogManager.log("Payload de configuración preparado: ${fullPayload.size} bytes en total.") }
+                fullPayload
             }
         } else {
-            byteArrayOf(commandId)
+            // Para calibración y otros comandos cortos
+            viewModel.configDataToWrite.value?.let { byteArrayOf(commandId) + it } ?: byteArrayOf(commandId)
         }
     }
 

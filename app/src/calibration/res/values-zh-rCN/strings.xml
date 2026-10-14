@@ -103,5 +103,7 @@
 
     <string name="nav_title_shutdown">设备关机</string>
 
+    <string name="toast_missing_volume">请输入体积</string>
+
 </resources>
 
